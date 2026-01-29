@@ -17,7 +17,7 @@ function PrivateRoute({ children }: { children: React.ReactNode }) {
 
 export default function App() {
   return (
-    <BrowserRouter
+    <BrowserRouter basename='/geostudio-console'
       future={{
         v7_startTransition: true,
         v7_relativeSplatPath: true,
@@ -42,3 +42,4 @@ export default function App() {
     </BrowserRouter>
   );
 }
+
