@@ -1,4 +1,4 @@
-﻿import { useState } from 'react';
+import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../services/api';
 
@@ -23,6 +23,7 @@ export default function SeriesPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (createMutation.isPending) return;
     createMutation.mutate({
       ...form,
       totalCount: form.totalCount ? parseInt(form.totalCount) : null,
@@ -109,8 +110,21 @@ export default function SeriesPage() {
                 />
               </div>
               <div className="flex gap-2 mt-6">
-                <button type="button" onClick={() => setShowModal(false)} className="flex-1 px-4 py-2 border rounded-lg">취소</button>
-                <button type="submit" className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg">생성</button>
+                <button 
+                  type="button" 
+                  onClick={() => setShowModal(false)} 
+                  className="flex-1 px-4 py-2 border rounded-lg"
+                  disabled={createMutation.isPending}
+                >
+                  취소
+                </button>
+                <button 
+                  type="submit" 
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg disabled:bg-blue-300"
+                  disabled={createMutation.isPending}
+                >
+                  {createMutation.isPending ? '생성 중...' : '생성'}
+                </button>
               </div>
             </form>
           </div>
