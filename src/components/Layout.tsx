@@ -4,7 +4,7 @@ import { useAuthStore } from '../stores/auth.store';
 const menuItems = [
   { path: '/', label: '대시보드', icon: '' },
   { path: '/series', label: '시리즈', icon: '' },
-  { path: '/batches', label: '배치', icon: '' },
+  { path: '/batches', label: '작업', icon: '' },
   { path: '/assets', label: '자산', icon: '' },
   { path: '/exports', label: '반출', icon: '' },
   { path: '/users', label: '사용자', icon: '' },
