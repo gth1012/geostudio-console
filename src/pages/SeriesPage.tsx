@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../services/api';
 
@@ -21,6 +21,13 @@ export default function SeriesPage() {
     },
   });
 
+  const archiveMutation = useMutation({
+    mutationFn: (seriesId: string) => api.put(`/series/${seriesId}/archive`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['series'] });
+    },
+  });
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (createMutation.isPending) return;
@@ -28,6 +35,13 @@ export default function SeriesPage() {
       ...form,
       totalCount: form.totalCount ? parseInt(form.totalCount) : null,
     });
+  };
+
+  const handleArchive = (seriesId: string, seriesName: string) => {
+    if (archiveMutation.isPending) return;
+    if (confirm(`"${seriesName}" 시리즈를 보관처리 하시겠습니까?`)) {
+      archiveMutation.mutate(seriesId);
+    }
   };
 
   return (
@@ -54,6 +68,7 @@ export default function SeriesPage() {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">아티스트</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">상태</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">생성일</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">관리</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
@@ -68,6 +83,17 @@ export default function SeriesPage() {
                     }`}>{s.status}</span>
                   </td>
                   <td className="px-6 py-4 text-gray-500">{new Date(s.created_at).toLocaleDateString()}</td>
+                  <td className="px-6 py-4">
+                    {s.status === 'ACTIVE' && (
+                      <button
+                        onClick={() => handleArchive(s.series_id, s.name)}
+                        className="px-3 py-1 text-sm text-gray-600 border rounded hover:bg-gray-100 disabled:opacity-50"
+                        disabled={archiveMutation.isPending}
+                      >
+                        보관
+                      </button>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>
