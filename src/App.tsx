@@ -5,6 +5,7 @@ import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
 import SeriesPage from './pages/SeriesPage';
 import BatchesPage from './pages/BatchesPage';
+import BatchDetailPage from './pages/BatchDetailPage';
 import AssetsPage from './pages/AssetsPage';
 import ExportsPage from './pages/ExportsPage';
 import UsersPage from './pages/UsersPage';
@@ -32,7 +33,7 @@ export default function App() {
         }>
           <Route index element={<DashboardPage />} />
           <Route path="series" element={<SeriesPage />} />
-          <Route path="batches" element={<BatchesPage />} />
+          <Route path="batches" element={<BatchesPage />} /><Route path="batches/:id" element={<BatchDetailPage />} />
           <Route path="assets" element={<AssetsPage />} />
           <Route path="exports" element={<ExportsPage />} />
           <Route path="users" element={<UsersPage />} />
@@ -42,4 +43,6 @@ export default function App() {
     </BrowserRouter>
   );
 }
+
+
 

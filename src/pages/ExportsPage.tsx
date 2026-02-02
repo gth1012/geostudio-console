@@ -1,4 +1,4 @@
-﻿import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../services/api';
 
 export default function ExportsPage() {
@@ -19,71 +19,60 @@ export default function ExportsPage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['exports'] }),
   });
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'APPROVED': return 'bg-green-100 text-green-800';
-      case 'COMPLETED': return 'bg-blue-100 text-blue-800';
-      case 'REJECTED': return 'bg-red-100 text-red-800';
-      default: return 'bg-yellow-100 text-yellow-800';
-    }
+  const getStatusBadge = (status: string) => {
+    const map: Record<string, string> = {
+      APPROVED: 'bg-status-green-dim text-status-green',
+      COMPLETED: 'bg-status-blue-dim text-status-blue',
+      REJECTED: 'bg-status-red-dim text-status-red',
+      REQUESTED: 'bg-status-yellow-dim text-status-yellow',
+    };
+    return map[status] || 'bg-status-yellow-dim text-status-yellow';
   };
 
   return (
-    <div>
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">반출 요청 관리</h1>
-      </div>
-
+    <div className="animate-fade-in">
       {isLoading ? (
-        <p>로딩 중...</p>
+        <p className="text-txt-secondary">로딩 중...</p>
       ) : (
-        <div className="bg-white rounded-lg shadow overflow-hidden">
+        <div className="bg-geo-card border border-geo-border rounded-xl overflow-hidden">
           <table className="w-full">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">시리즈</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">타입</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">수량</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">요청자</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">상태</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">요청일</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">액션</th>
+            <thead>
+              <tr className="border-b border-geo-border">
+                <th className="px-6 py-3 text-left text-xs font-semibold text-txt-secondary uppercase tracking-wider">시리즈</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-txt-secondary uppercase tracking-wider">타입</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-txt-secondary uppercase tracking-wider">수량</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-txt-secondary uppercase tracking-wider">요청자</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-txt-secondary uppercase tracking-wider">상태</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-txt-secondary uppercase tracking-wider">요청일</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-txt-secondary uppercase tracking-wider">액션</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200">
+            <tbody>
               {exports?.map((e: any) => (
-                <tr key={e.export_id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4">{e.series_name || '-'}</td>
-                  <td className="px-6 py-4">{e.export_type}</td>
-                  <td className="px-6 py-4">{e.total_count}개</td>
-                  <td className="px-6 py-4">{e.requested_by_name}</td>
+                <tr key={e.export_id} className="border-b border-geo-border/50 last:border-0 dark-table-row transition-colors">
+                  <td className="px-6 py-4 text-txt-primary">{e.series_name || '-'}</td>
+                  <td className="px-6 py-4 text-txt-secondary font-mono text-sm">{e.export_type}</td>
+                  <td className="px-6 py-4 text-txt-primary font-mono">{e.total_count}개</td>
+                  <td className="px-6 py-4 text-txt-secondary">{e.requested_by_name}</td>
                   <td className="px-6 py-4">
-                    <span className={`px-2 py-1 rounded text-xs ${getStatusColor(e.status)}`}>{e.status}</span>
+                    <span className={`px-2 py-1 rounded text-xs font-medium font-mono ${getStatusBadge(e.status)}`}>{e.status}</span>
                   </td>
-                  <td className="px-6 py-4 text-gray-500">{new Date(e.requested_at).toLocaleDateString()}</td>
+                  <td className="px-6 py-4 text-txt-muted text-sm">{new Date(e.requested_at).toLocaleDateString()}</td>
                   <td className="px-6 py-4">
                     {e.status === 'REQUESTED' && (
                       <div className="flex gap-2">
-                        <button
-                          onClick={() => approveMutation.mutate(e.export_id)}
-                          className="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700"
-                        >
-                          승인
-                        </button>
-                        <button
-                          onClick={() => rejectMutation.mutate(e.export_id)}
-                          className="px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700"
-                        >
-                          거부
-                        </button>
+                        <button onClick={() => approveMutation.mutate(e.export_id)} className="px-3 py-1 bg-status-green-dim text-status-green rounded text-xs font-medium hover:bg-status-green/20 transition-all">승인</button>
+                        <button onClick={() => rejectMutation.mutate(e.export_id)} className="px-3 py-1 bg-status-red-dim text-status-red rounded text-xs font-medium hover:bg-status-red/20 transition-all">거부</button>
                       </div>
                     )}
                   </td>
                 </tr>
               ))}
+              {!exports?.length && (
+                <tr><td colSpan={7} className="px-6 py-8 text-center text-txt-muted">반출 요청이 없습니다</td></tr>
+              )}
             </tbody>
           </table>
-          {!exports?.length && <p className="text-center py-8 text-gray-500">반출 요청이 없습니다</p>}
         </div>
       )}
     </div>
