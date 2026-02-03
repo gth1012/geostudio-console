@@ -5,7 +5,7 @@ import api from '../services/api';
 
 export default function BatchesPage() {
   const [showModal, setShowModal] = useState(false);
-  const [form, setForm] = useState({ seriesId: '', name: '', totalAssets: '' });
+  const [form, setForm] = useState({ seriesId: '', totalAssets: '' });
   const [modalPos, setModalPos] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const dragOffset = useRef({ x: 0, y: 0 });
@@ -20,7 +20,7 @@ export default function BatchesPage() {
 
   const createMutation = useMutation({
     mutationFn: (data: any) => api.post('/batches', data),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['batches'] }); setShowModal(false); setForm({ seriesId: '', name: '', totalAssets: '' }); },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['batches'] }); setShowModal(false); setForm({ seriesId: '', totalAssets: '' }); },
   });
 
   const updateMutation = useMutation({
@@ -55,9 +55,9 @@ export default function BatchesPage() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-geo-border">
-                <th className="px-6 py-3 text-left text-xs font-semibold text-txt-secondary uppercase tracking-wider">배치명</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-txt-secondary uppercase tracking-wider">ID</th>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-txt-secondary uppercase tracking-wider">시리즈</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-txt-secondary uppercase tracking-wider">번호</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-txt-secondary uppercase tracking-wider">코드</th>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-txt-secondary uppercase tracking-wider">자산수</th>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-txt-secondary uppercase tracking-wider">상태</th>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-txt-secondary uppercase tracking-wider">생성일</th>
@@ -65,30 +65,37 @@ export default function BatchesPage() {
               </tr>
             </thead>
             <tbody>
-              {batches?.map((b: any) => (
+              {batches?.map((b: any) => {
+                const seriesCode = series?.find((s: any) => s.series_id === b.series_id)?.code || '-';
+                return (
                 <tr key={b.batch_id} className="border-b border-geo-border/50 last:border-0 dark-table-row transition-colors">
-                  <td className="px-6 py-4 font-medium text-status-blue cursor-pointer hover:text-status-blue/80 transition-colors" onClick={() => navigate(`/batches/${b.batch_id}`)}>{b.name || `Batch ${b.display_id}`}</td>
+                  <td className="px-6 py-4 font-mono text-sm text-status-blue">{b.display_id || '-'}</td>
                   <td className="px-6 py-4 text-txt-secondary">{b.series_name}</td>
-                  <td className="px-6 py-4 text-txt-secondary font-mono">{b.display_id || '-'}</td>
+                  <td className="px-6 py-4 text-txt-secondary font-mono">{seriesCode}</td>
                   <td className="px-6 py-4 text-txt-primary font-mono">{b.items_completed}/{b.items_total}</td>
                   <td className="px-6 py-4"><span className={`px-2 py-1 rounded text-xs font-medium font-mono ${getStatusBadge(b.status)}`}>{b.status}</span></td>
                   <td className="px-6 py-4 text-txt-muted text-sm">{new Date(b.created_at).toLocaleDateString()}</td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-1.5">
                       <button
+                        onClick={() => navigate(`/batches/${b.batch_id}`)}
+                        className="px-2.5 py-1 text-[11px] font-medium rounded border transition-all bg-status-purple text-white border-status-purple hover:bg-status-purple/80"
+                      >생성</button>
+                      <button
                         disabled={b.status !== 'DRAFT'}
                         onClick={() => { setEditTarget({ batch_id: b.batch_id, name: b.name || '' }); setEditName(b.name || ''); }}
-                        className="px-2.5 py-1 text-[11px] font-medium rounded border transition-all bg-status-purple/10 text-status-purple border-status-purple/30 hover:bg-status-purple/20 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-status-purple/10"
+                        className="px-2.5 py-1 text-[11px] font-medium rounded border transition-all bg-transparent text-status-purple border-status-purple/30 hover:bg-status-purple/10 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent"
                       >수정</button>
                       <button
                         disabled={b.status !== 'DRAFT'}
-                        onClick={() => setDeleteTarget({ batch_id: b.batch_id, name: b.name || `Batch ${b.display_id}` })}
+                        onClick={() => setDeleteTarget({ batch_id: b.batch_id, name: b.display_id || b.batch_id })}
                         className="px-2.5 py-1 text-[11px] font-medium rounded border transition-all bg-status-red/10 text-status-red border-status-red/30 hover:bg-status-red/20 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-status-red/10"
                       >삭제</button>
                     </div>
                   </td>
                 </tr>
-              ))}
+                );
+              })}
               {!batches?.length && <tr><td colSpan={7} className="px-6 py-8 text-center text-txt-muted">배치가 없습니다</td></tr>}
             </tbody>
           </table>
@@ -151,10 +158,6 @@ export default function BatchesPage() {
                     <option value="">시리즈를 선택하세요</option>
                     {series?.map((s: any) => <option key={s.series_id} value={s.series_id}>{s.name}</option>)}
                   </select>
-                </div>
-                <div>
-                  <label className="block text-xs text-txt-secondary mb-1.5">배치명</label>
-                  <input placeholder="배치명 (선택)" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="w-full px-4 py-2.5 bg-geo-main border border-geo-border rounded-lg text-txt-primary placeholder-txt-muted focus:ring-2 focus:ring-status-purple/40 outline-none" />
                 </div>
                 <div>
                   <label className="block text-xs text-txt-secondary mb-1.5">예상 자산 수</label>
