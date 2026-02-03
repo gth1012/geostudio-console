@@ -16,9 +16,16 @@ export default function BatchDetailPage() {
   const { data: batch, isLoading: batchLoading } = useQuery({ queryKey: ['batch', id], queryFn: () => api.get(`/batches/${id}`).then((res) => res.data.data) });
   const { data: assets, isLoading: assetsLoading } = useQuery({ queryKey: ['assets', id], queryFn: () => api.get(`/assets?batchId=${id}`).then((res) => res.data.data), enabled: !!id });
 
+  const [showLockConfirm, setShowLockConfirm] = useState(false);
+
   const createAssetsMutation = useMutation({
     mutationFn: (data: { batchId: string; seriesId: string; count: number }) => api.post('/assets/bulk', data),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['assets', id] }); queryClient.invalidateQueries({ queryKey: ['batch', id] }); setShowAssetModal(false); setAssetCount('100'); },
+  });
+
+  const lockMutation = useMutation({
+    mutationFn: (batchId: string) => api.post(`/batches/${batchId}/lock`),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['batch', id] }); queryClient.invalidateQueries({ queryKey: ['assets', id] }); setShowLockConfirm(false); },
   });
 
   const handleCreateAssets = () => { if (!batch) return; createAssetsMutation.mutate({ batchId: batch.batch_id, seriesId: batch.series_id, count: parseInt(assetCount) }); };
@@ -27,7 +34,7 @@ export default function BatchDetailPage() {
   const handleMouseUp = () => { if (isDragging) setIsDragging(false); };
 
   const getStatusBadge = (status: string) => {
-    const map: Record<string, string> = { COMPLETED: 'bg-status-green-dim text-status-green', PROCESSING: 'bg-status-blue-dim text-status-blue', CREATED: 'bg-status-yellow-dim text-status-yellow', FAILED: 'bg-status-red-dim text-status-red', DRAFT: 'bg-status-yellow-dim text-status-yellow', QR_GENERATED: 'bg-status-green-dim text-status-green', DINA_INSERTED: 'bg-status-blue-dim text-status-blue', EXPORTED: 'bg-status-purple-dim text-status-purple' };
+    const map: Record<string, string> = { COMPLETED: 'bg-status-green-dim text-status-green', PROCESSING: 'bg-status-blue-dim text-status-blue', CREATED: 'bg-status-yellow-dim text-status-yellow', FAILED: 'bg-status-red-dim text-status-red', DRAFT: 'bg-status-yellow-dim text-status-yellow', LOCKED: 'bg-status-red-dim text-status-red', QR_GENERATED: 'bg-status-green-dim text-status-green', DINA_INSERTED: 'bg-status-blue-dim text-status-blue', EXPORTED: 'bg-status-purple-dim text-status-purple' };
     return map[status] || 'bg-status-yellow-dim text-status-yellow';
   };
 
@@ -42,7 +49,12 @@ export default function BatchDetailPage() {
           <h1 className="text-xl font-semibold text-txt-primary">{batch.display_id || batch.batch_id}</h1>
           <span className={`px-3 py-1 rounded text-xs font-medium font-mono ${getStatusBadge(batch.status)}`}>{batch.status}</span>
         </div>
-        <button onClick={() => { setModalPos({ x: 0, y: 0 }); setShowAssetModal(true); }} className="px-4 py-2 bg-status-purple text-white rounded-lg hover:bg-status-purple/80 text-sm font-medium transition-all">+ 자산 생성</button>
+        <div className="flex items-center gap-2">
+          {batch.status === 'DRAFT' && (
+            <button onClick={() => setShowLockConfirm(true)} className="px-4 py-2 bg-status-red text-white rounded-lg hover:bg-status-red/80 text-sm font-medium transition-all">LOCK 확정</button>
+          )}
+          <button onClick={() => { setModalPos({ x: 0, y: 0 }); setShowAssetModal(true); }} className="px-4 py-2 bg-status-purple text-white rounded-lg hover:bg-status-purple/80 text-sm font-medium transition-all">+ 자산 생성</button>
+        </div>
       </div>
 
       <div className="bg-geo-card border border-geo-border rounded-xl p-6 mb-6">
@@ -65,6 +77,7 @@ export default function BatchDetailPage() {
             <thead><tr className="border-b border-geo-border">
               <th className="w-16 px-3 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">No</th>
               <th className="px-3 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">DINA ID</th>
+              <th className="w-32 px-3 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">에디션</th>
               <th className="w-24 px-3 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">상태</th>
               <th className="w-24 px-3 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">생성일</th>
             </tr></thead>
@@ -73,6 +86,7 @@ export default function BatchDetailPage() {
                 <tr key={asset.asset_id} className="border-b border-geo-border/50 last:border-0 dark-table-row transition-colors">
                   <td className="px-3 py-3 text-center text-txt-muted font-mono">{index + 1}</td>
                   <td className="px-3 py-3 text-center font-mono text-status-blue text-sm truncate">{asset.dina_id}</td>
+                  <td className="px-3 py-3 text-center font-mono text-sm text-txt-primary">{asset.edition ? `#${String(asset.edition).padStart(5, '0')} / ${(batch.series?.total_count || 0).toLocaleString()}` : <span className="text-txt-muted">-</span>}</td>
                   <td className="px-3 py-3 text-center"><span className={`inline-block w-20 px-1 py-1 rounded text-xs font-medium text-center ${getStatusBadge(asset.status)}`}>{asset.status}</span></td>
                   <td className="px-3 py-3 text-center text-txt-muted text-xs">{new Date(asset.created_at).toLocaleDateString()}</td>
                 </tr>
@@ -81,6 +95,26 @@ export default function BatchDetailPage() {
           </table>
         )}
       </div>
+
+      {/* LOCK 확정 모달 */}
+      {showLockConfirm && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center">
+          <div className="bg-geo-card border border-geo-border rounded-xl w-full max-w-sm p-6">
+            <h3 className="text-base font-semibold text-txt-primary mb-2">배치 확정 (LOCK)</h3>
+            <p className="text-sm text-txt-secondary mb-2">확정 후 취소할 수 없습니다.</p>
+            <p className="text-sm text-txt-primary mb-1">에디션 <span className="font-mono text-status-blue">#{String(batch.series?.next_edition || 1).padStart(5, '0')}</span> ~ <span className="font-mono text-status-blue">#{String((batch.series?.next_edition || 1) + (assets?.length || 0) - 1).padStart(5, '0')}</span> 가 배정됩니다.</p>
+            <p className="text-xs text-txt-muted mb-6">자산 수: {assets?.length || 0}개</p>
+            {lockMutation.isError && <p className="text-sm text-status-red mb-4">{(lockMutation.error as any)?.response?.data?.message || '확정 실패'}</p>}
+            <div className="flex justify-end gap-3">
+              <button onClick={() => setShowLockConfirm(false)} disabled={lockMutation.isPending} className="px-4 py-2 text-sm text-txt-secondary border border-geo-border rounded-lg hover:border-geo-border-hover transition-all">취소</button>
+              <button onClick={() => lockMutation.mutate(batch.batch_id)} disabled={lockMutation.isPending}
+                className="px-4 py-2 text-sm font-medium bg-status-red text-white rounded-lg hover:bg-status-red/80 transition-all disabled:opacity-50">
+                {lockMutation.isPending ? '확정 중...' : '확정'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showAssetModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-start justify-center pt-20 px-4 pb-4" onMouseMove={handleMouseMove} onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp}>

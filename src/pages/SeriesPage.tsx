@@ -45,7 +45,7 @@ function CarrierGuideText({ material }: { material: string }) {
 export default function SeriesPage() {
   const [showModal, setShowModal] = useState(false);
   const [showTrash, setShowTrash] = useState(false);
-  const [form, setForm] = useState({ name: '', code: '', description: '', artistName: '', material: 'paper_art' });
+  const [form, setForm] = useState({ name: '', code: '', description: '', artistName: '', material: 'paper_art', totalCount: '' });
   const [modalPos, setModalPos] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const dragOffset = useRef({ x: 0, y: 0 });
@@ -56,7 +56,7 @@ export default function SeriesPage() {
   const { data: series, isLoading } = useQuery({ queryKey: ['series'], queryFn: () => api.get('/series').then((res) => res.data.data), enabled: !showTrash });
   const { data: trashedSeries, isLoading: isTrashLoading } = useQuery({ queryKey: ['series-trash'], queryFn: () => api.get('/series/trash').then((res) => res.data.data), enabled: showTrash });
 
-  const createMutation = useMutation({ mutationFn: (data: any) => api.post('/series', { ...data, insertionMethod: materialCarrier(data.material) }), onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['series'] }); setShowModal(false); setForm({ name: '', code: '', description: '', artistName: '', material: 'paper_art' }); } });
+  const createMutation = useMutation({ mutationFn: (data: any) => api.post('/series', { ...data, totalCount: data.totalCount ? parseInt(data.totalCount) : 0, insertionMethod: materialCarrier(data.material) }), onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['series'] }); setShowModal(false); setForm({ name: '', code: '', description: '', artistName: '', material: 'paper_art', totalCount: '' }); } });
   const updateMutation = useMutation({ mutationFn: ({ id, data }: { id: string; data: any }) => api.patch(`/series/${id}`, { ...data, insertion_method: materialCarrier(data.material) }), onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['series'] }); setEditTarget(null); } });
   const archiveMutation = useMutation({ mutationFn: (seriesId: string) => api.put(`/series/${seriesId}/archive`), onSuccess: () => queryClient.invalidateQueries({ queryKey: ['series'] }) });
   const activateMutation = useMutation({ mutationFn: (seriesId: string) => api.put(`/series/${seriesId}/activate`), onSuccess: () => queryClient.invalidateQueries({ queryKey: ['series'] }) });
@@ -104,7 +104,9 @@ export default function SeriesPage() {
                 <th className="w-24 px-3 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">코드</th>
                 <th className="w-24 px-3 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">아티스트</th>
                 <th className="w-28 px-3 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">설명</th>
-                <th className="w-20 px-3 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">재질</th>
+                <th className="w-16 px-3 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">재질</th>
+                <th className="w-20 px-3 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">총발행량</th>
+                <th className="w-20 px-3 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">진행률</th>
                 <th className="w-20 px-3 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">{showTrash ? '삭제일' : '상태'}</th>
                 <th className="w-24 px-3 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">{showTrash ? '' : '생성일'}</th>
                 <th className="w-28 px-3 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">작업</th>
@@ -112,7 +114,7 @@ export default function SeriesPage() {
             </thead>
             <tbody>
               {displayData?.length === 0 ? (
-                <tr><td colSpan={9} className="px-6 py-8 text-center text-txt-muted">{showTrash ? '휴지통이 비어있습니다.' : '시리즈가 없습니다.'}</td></tr>
+                <tr><td colSpan={11} className="px-6 py-8 text-center text-txt-muted">{showTrash ? '휴지통이 비어있습니다.' : '시리즈가 없습니다.'}</td></tr>
               ) : (
                 displayData?.map((s: any) => (
                   <tr key={s.series_id} className="border-b border-geo-border/50 last:border-0 dark-table-row transition-colors">
@@ -122,6 +124,10 @@ export default function SeriesPage() {
                     <td className="px-3 py-3 text-center text-txt-secondary overflow-visible"><Tooltip text={s.artist_name || ''}><span className="block truncate">{s.artist_name || '-'}</span></Tooltip></td>
                     <td className="px-3 py-3 text-center text-txt-muted overflow-visible"><Tooltip text={s.description || ''}><span className="block truncate">{s.description || '-'}</span></Tooltip></td>
                     <td className="px-3 py-3 text-center text-txt-secondary text-xs">{materialLabel(s.material || 'paper_art')}</td>
+                    <td className="px-3 py-3 text-center text-txt-primary font-mono text-sm">{s.total_count > 0 ? s.total_count.toLocaleString() : '-'}</td>
+                    <td className="px-3 py-3 text-center text-sm">{s.total_count > 0 ? (
+                      <span className="font-mono text-status-blue">{Math.round(((s.next_edition - 1) / s.total_count) * 100)}%</span>
+                    ) : <span className="text-txt-muted">-</span>}</td>
                     <td className="px-3 py-3 text-center">
                       {showTrash ? <span className="text-txt-muted text-xs">{new Date(s.deleted_at).toLocaleDateString()}</span> : (
                         <span className={`inline-block w-16 px-1 py-1 rounded text-xs font-medium text-center ${s.status === 'ACTIVE' ? 'bg-status-green-dim text-status-green' : 'bg-status-yellow-dim text-status-yellow'}`}>{s.status === 'ACTIVE' ? 'Active' : 'Inactive'}</span>
@@ -235,6 +241,10 @@ export default function SeriesPage() {
                     {MATERIAL_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                   </select>
                   <CarrierGuideText material={form.material} />
+                </div>
+                <div>
+                  <label className="block text-xs text-txt-secondary mb-1.5">총 발행량 *</label>
+                  <input type="number" placeholder="예: 100000" value={form.totalCount} onChange={(e) => setForm({ ...form, totalCount: e.target.value })} className="w-full px-4 py-2.5 bg-geo-main border border-geo-border rounded-lg text-txt-primary placeholder-txt-muted focus:ring-2 focus:ring-status-purple/40 focus:border-status-purple/60 outline-none transition-all" required min="1" />
                 </div>
                 <div>
                   <label className="block text-xs text-txt-secondary mb-1.5">설명</label>

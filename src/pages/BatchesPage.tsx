@@ -39,7 +39,7 @@ export default function BatchesPage() {
   const handleMouseUp = () => { if (isDragging) setIsDragging(false); };
 
   const getStatusBadge = (status: string) => {
-    const map: Record<string, string> = { COMPLETED: 'bg-status-green-dim text-status-green', IN_PROGRESS: 'bg-status-yellow-dim text-status-yellow', FAILED: 'bg-status-red-dim text-status-red', DRAFT: 'bg-status-yellow-dim text-status-yellow' };
+    const map: Record<string, string> = { COMPLETED: 'bg-status-green-dim text-status-green', IN_PROGRESS: 'bg-status-yellow-dim text-status-yellow', FAILED: 'bg-status-red-dim text-status-red', DRAFT: 'bg-status-yellow-dim text-status-yellow', LOCKED: 'bg-status-red-dim text-status-red' };
     return map[status] || 'bg-status-yellow-dim text-status-yellow';
   };
 
