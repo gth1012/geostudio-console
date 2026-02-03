@@ -51,51 +51,40 @@ export default function BatchesPage() {
       </div>
 
       {isLoading ? <p className="text-txt-secondary">로딩 중...</p> : (
-        <div className="bg-geo-card border border-geo-border rounded-xl overflow-hidden">
-          <table className="w-full">
+        <div className="bg-geo-card border border-geo-border rounded-xl overflow-visible">
+          <table className="w-full table-fixed">
             <thead>
               <tr className="border-b border-geo-border">
-                <th className="px-6 py-3 text-left text-xs font-semibold text-txt-secondary uppercase tracking-wider">ID</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-txt-secondary uppercase tracking-wider">시리즈</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-txt-secondary uppercase tracking-wider">코드</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-txt-secondary uppercase tracking-wider">자산수</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-txt-secondary uppercase tracking-wider">상태</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-txt-secondary uppercase tracking-wider">생성일</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-txt-secondary uppercase tracking-wider">액션</th>
+                <th className="w-24 px-3 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">ID</th>
+                <th className="w-28 px-3 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">시리즈</th>
+                <th className="w-24 px-3 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">코드</th>
+                <th className="w-20 px-3 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">자산수</th>
+                <th className="w-20 px-3 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">상태</th>
+                <th className="w-24 px-3 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">생성일</th>
+                <th className="w-32 px-3 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">액션</th>
               </tr>
             </thead>
             <tbody>
-              {batches?.map((b: any) => {
-                const seriesCode = series?.find((s: any) => s.series_id === b.series_id)?.code || '-';
-                return (
+              {batches?.map((b: any) => (
                 <tr key={b.batch_id} className="border-b border-geo-border/50 last:border-0 dark-table-row transition-colors">
-                  <td className="px-6 py-4 font-mono text-sm text-status-blue">{b.display_id || '-'}</td>
-                  <td className="px-6 py-4 text-txt-secondary">{b.series_name}</td>
-                  <td className="px-6 py-4 text-txt-secondary font-mono">{seriesCode}</td>
-                  <td className="px-6 py-4 text-txt-primary font-mono">{b.items_completed}/{b.items_total}</td>
-                  <td className="px-6 py-4"><span className={`px-2 py-1 rounded text-xs font-medium font-mono ${getStatusBadge(b.status)}`}>{b.status}</span></td>
-                  <td className="px-6 py-4 text-txt-muted text-sm">{new Date(b.created_at).toLocaleDateString()}</td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-1.5">
-                      <button
-                        onClick={() => navigate(`/batches/${b.batch_id}`)}
-                        className="px-2.5 py-1 text-[11px] font-medium rounded border transition-all bg-status-purple text-white border-status-purple hover:bg-status-purple/80"
-                      >생성</button>
-                      <button
-                        disabled={b.status !== 'DRAFT'}
-                        onClick={() => { setEditTarget({ batch_id: b.batch_id, name: b.name || '' }); setEditName(b.name || ''); }}
-                        className="px-2.5 py-1 text-[11px] font-medium rounded border transition-all bg-transparent text-status-purple border-status-purple/30 hover:bg-status-purple/10 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent"
-                      >수정</button>
-                      <button
-                        disabled={b.status !== 'DRAFT'}
-                        onClick={() => setDeleteTarget({ batch_id: b.batch_id, name: b.display_id || b.batch_id })}
-                        className="px-2.5 py-1 text-[11px] font-medium rounded border transition-all bg-status-red/10 text-status-red border-status-red/30 hover:bg-status-red/20 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-status-red/10"
-                      >삭제</button>
+                  <td className="px-3 py-3 text-center font-mono text-sm text-status-blue">{b.display_id || '-'}</td>
+                  <td className="px-3 py-3 text-center text-txt-primary truncate">{b.series_name || '-'}</td>
+                  <td className="px-3 py-3 text-center text-txt-secondary font-mono truncate">{b.series_code || '-'}</td>
+                  <td className="px-3 py-3 text-center text-txt-primary font-mono">{b.items_completed}/{b.items_total}</td>
+                  <td className="px-3 py-3 text-center"><span className={`inline-block w-16 px-1 py-1 rounded text-xs font-medium text-center ${getStatusBadge(b.status)}`}>{b.status}</span></td>
+                  <td className="px-3 py-3 text-center text-txt-muted text-xs">{new Date(b.created_at).toLocaleDateString()}</td>
+                  <td className="px-3 py-3 text-center">
+                    <div className="flex justify-center gap-1">
+                      <button onClick={() => navigate(`/batches/${b.batch_id}`)}
+                        className="w-12 px-1 py-1 text-xs bg-status-purple text-white rounded hover:bg-status-purple/80 transition-all">생성</button>
+                      <button disabled={b.status !== 'DRAFT'} onClick={() => { setEditTarget({ batch_id: b.batch_id, name: b.name || '' }); setEditName(b.name || ''); }}
+                        className="w-12 px-1 py-1 text-xs bg-status-purple/10 text-status-purple rounded hover:bg-status-purple/20 disabled:opacity-30 disabled:cursor-not-allowed transition-all">수정</button>
+                      <button disabled={b.status !== 'DRAFT'} onClick={() => setDeleteTarget({ batch_id: b.batch_id, name: b.display_id || b.batch_id })}
+                        className="w-12 px-1 py-1 text-xs bg-status-red-dim text-status-red rounded hover:bg-status-red/20 disabled:opacity-30 disabled:cursor-not-allowed transition-all">삭제</button>
                     </div>
                   </td>
                 </tr>
-                );
-              })}
+              ))}
               {!batches?.length && <tr><td colSpan={7} className="px-6 py-8 text-center text-txt-muted">배치가 없습니다</td></tr>}
             </tbody>
           </table>
