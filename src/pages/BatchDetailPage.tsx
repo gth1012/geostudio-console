@@ -17,6 +17,7 @@ export default function BatchDetailPage() {
   const { data: assets, isLoading: assetsLoading } = useQuery({ queryKey: ['assets', id], queryFn: () => api.get(`/assets?batchId=${id}`).then((res) => res.data.data), enabled: !!id });
 
   const [showLockConfirm, setShowLockConfirm] = useState(false);
+  const [showUnlockConfirm, setShowUnlockConfirm] = useState(false);
 
   const createAssetsMutation = useMutation({
     mutationFn: (data: { batchId: string; seriesId: string; count: number }) => api.post('/assets/bulk', data),
@@ -26,6 +27,18 @@ export default function BatchDetailPage() {
   const lockMutation = useMutation({
     mutationFn: (batchId: string) => api.post(`/batches/${batchId}/lock`),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['batch', id] }); queryClient.invalidateQueries({ queryKey: ['assets', id] }); setShowLockConfirm(false); },
+  });
+
+  const unlockMutation = useMutation({
+    mutationFn: (batchId: string) => api.post(`/geocam/admin/unlock-batch/${batchId}`),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['batch', id] }); queryClient.invalidateQueries({ queryKey: ['anomaly', id] }); setShowUnlockConfirm(false); },
+  });
+
+  const { data: anomalyStatus } = useQuery({
+    queryKey: ['anomaly', id],
+    queryFn: () => api.get(`/geocam/anomaly-status/${id}`).then((res) => res.data),
+    enabled: !!id,
+    refetchInterval: 30000,
   });
 
   const handleCreateAssets = () => { if (!batch) return; createAssetsMutation.mutate({ batchId: batch.batch_id, seriesId: batch.series_id, count: parseInt(assetCount) }); };
@@ -48,8 +61,14 @@ export default function BatchDetailPage() {
           <button onClick={() => navigate('/batches')} className="px-3 py-2 text-sm border border-geo-border text-txt-secondary rounded-lg hover:text-txt-primary hover:border-geo-border-hover transition-all">← 목록</button>
           <h1 className="text-xl font-semibold text-txt-primary">{batch.display_id || batch.batch_id}</h1>
           <span className={`px-3 py-1 rounded text-xs font-medium font-mono ${getStatusBadge(batch.status)}`}>{batch.status}</span>
+          {batch.batch_locked_until && new Date(batch.batch_locked_until) > new Date() && (
+            <span className="px-2 py-1 rounded text-xs font-bold bg-status-red/20 text-status-red border border-status-red/30 animate-pulse">LOCKED</span>
+          )}
         </div>
         <div className="flex items-center gap-2">
+          {batch.batch_locked_until && new Date(batch.batch_locked_until) > new Date() && (
+            <button onClick={() => setShowUnlockConfirm(true)} className="px-4 py-2 bg-status-yellow text-geo-deep rounded-lg hover:bg-status-yellow/80 text-sm font-medium transition-all">잠금 해제</button>
+          )}
           {batch.status === 'DRAFT' && (
             <button onClick={() => setShowLockConfirm(true)} className="px-4 py-2 bg-status-red text-white rounded-lg hover:bg-status-red/80 text-sm font-medium transition-all">LOCK 확정</button>
           )}
@@ -67,6 +86,45 @@ export default function BatchDetailPage() {
           <div><p className="text-xs text-txt-muted uppercase tracking-wider mb-1">생성일</p><p className="font-medium text-txt-primary">{new Date(batch.created_at).toLocaleDateString()}</p></div>
         </div>
       </div>
+
+      {/* 이상 감지 모니터링 */}
+      {anomalyStatus && (
+        <div className={`border rounded-xl p-6 mb-6 ${anomalyStatus.is_locked ? 'bg-status-red/5 border-status-red/30' : 'bg-geo-card border-geo-border'}`}>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-sm font-semibold text-txt-primary">이상 감지 모니터링</h2>
+            {anomalyStatus.is_locked && (
+              <span className="px-2 py-1 rounded text-xs font-bold bg-status-red/20 text-status-red border border-status-red/30">잠금 상태</span>
+            )}
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div>
+              <p className="text-xs text-txt-muted uppercase tracking-wider mb-1">5분 내 검증 수</p>
+              <p className={`font-medium font-mono text-lg ${anomalyStatus.current_verify_count >= anomalyStatus.threshold ? 'text-status-red' : 'text-txt-primary'}`}>
+                {anomalyStatus.current_verify_count ?? 0}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-txt-muted uppercase tracking-wider mb-1">임계값</p>
+              <p className="font-medium text-txt-primary font-mono text-lg">{anomalyStatus.threshold ?? 50}</p>
+            </div>
+            <div>
+              <p className="text-xs text-txt-muted uppercase tracking-wider mb-1">잠금 여부</p>
+              <p className={`font-medium text-lg ${anomalyStatus.is_locked ? 'text-status-red' : 'text-status-green'}`}>
+                {anomalyStatus.is_locked ? '잠금' : '정상'}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-txt-muted uppercase tracking-wider mb-1">잠금 사유</p>
+              <p className="font-medium text-txt-primary text-sm">{anomalyStatus.lock_reason || '-'}</p>
+            </div>
+          </div>
+          {anomalyStatus.is_locked && anomalyStatus.locked_until && (
+            <div className="mt-4 pt-4 border-t border-geo-border/50">
+              <p className="text-xs text-txt-muted">잠금 만료: <span className="text-txt-primary font-mono">{new Date(anomalyStatus.locked_until).toLocaleString('ko-KR')}</span></p>
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="bg-geo-card border border-geo-border rounded-xl overflow-hidden">
         <div className="px-6 py-4 border-b border-geo-border"><h2 className="text-sm font-semibold text-txt-primary">자산 목록 ({assets?.length || 0})</h2></div>
@@ -95,6 +153,28 @@ export default function BatchDetailPage() {
           </table>
         )}
       </div>
+
+      {/* 잠금 해제 확인 모달 */}
+      {showUnlockConfirm && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center">
+          <div className="bg-geo-card border border-geo-border rounded-xl w-full max-w-sm p-6">
+            <h3 className="text-base font-semibold text-txt-primary mb-2">배치 잠금 해제</h3>
+            <p className="text-sm text-txt-secondary mb-2">이 배치의 이상 감지 잠금을 해제합니다.</p>
+            {batch.lock_reason && (
+              <p className="text-sm text-status-yellow mb-2">잠금 사유: {batch.lock_reason}</p>
+            )}
+            <p className="text-xs text-txt-muted mb-6">해제 후 다시 이상이 감지되면 자동으로 잠길 수 있습니다.</p>
+            {unlockMutation.isError && <p className="text-sm text-status-red mb-4">{(unlockMutation.error as any)?.response?.data?.message || '해제 실패'}</p>}
+            <div className="flex justify-end gap-3">
+              <button onClick={() => setShowUnlockConfirm(false)} disabled={unlockMutation.isPending} className="px-4 py-2 text-sm text-txt-secondary border border-geo-border rounded-lg hover:border-geo-border-hover transition-all">취소</button>
+              <button onClick={() => unlockMutation.mutate(batch.batch_id)} disabled={unlockMutation.isPending}
+                className="px-4 py-2 text-sm font-medium bg-status-yellow text-geo-deep rounded-lg hover:bg-status-yellow/80 transition-all disabled:opacity-50">
+                {unlockMutation.isPending ? '해제 중...' : '잠금 해제'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* LOCK 확정 모달 */}
       {showLockConfirm && (

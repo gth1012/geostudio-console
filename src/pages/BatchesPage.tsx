@@ -71,7 +71,14 @@ export default function BatchesPage() {
                   <td className="px-3 py-3 text-center text-txt-primary truncate">{b.series_name || '-'}</td>
                   <td className="px-3 py-3 text-center text-txt-secondary font-mono truncate">{b.series_code || '-'}</td>
                   <td className="px-3 py-3 text-center text-txt-primary font-mono">{b.items_completed}/{b.items_total}</td>
-                  <td className="px-3 py-3 text-center"><span className={`inline-block w-16 px-1 py-1 rounded text-xs font-medium text-center ${getStatusBadge(b.status)}`}>{b.status}</span></td>
+                  <td className="px-3 py-3 text-center">
+                    <div className="flex justify-center items-center gap-1">
+                      <span className={`inline-block w-16 px-1 py-1 rounded text-xs font-medium text-center ${getStatusBadge(b.status)}`}>{b.status}</span>
+                      {b.batch_locked_until && new Date(b.batch_locked_until) > new Date() && (
+                        <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-bold bg-status-red/20 text-status-red border border-status-red/30 animate-pulse">LOCKED</span>
+                      )}
+                    </div>
+                  </td>
                   <td className="px-3 py-3 text-center text-txt-muted text-xs">{new Date(b.created_at).toLocaleDateString()}</td>
                   <td className="px-3 py-3 text-center">
                     <div className="flex justify-center gap-1">
