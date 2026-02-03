@@ -28,12 +28,15 @@ export default function SeriesPage() {
   const [modalPos, setModalPos] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const dragOffset = useRef({ x: 0, y: 0 });
+  const [editTarget, setEditTarget] = useState<{ series_id: string; name: string; code: string; description: string; artist_name: string } | null>(null);
+  const [editForm, setEditForm] = useState({ name: '', code: '', description: '', artistName: '' });
   const queryClient = useQueryClient();
 
   const { data: series, isLoading } = useQuery({ queryKey: ['series'], queryFn: () => api.get('/series').then((res) => res.data.data), enabled: !showTrash });
   const { data: trashedSeries, isLoading: isTrashLoading } = useQuery({ queryKey: ['series-trash'], queryFn: () => api.get('/series/trash').then((res) => res.data.data), enabled: showTrash });
 
   const createMutation = useMutation({ mutationFn: (data: any) => api.post('/series', data), onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['series'] }); setShowModal(false); setForm({ name: '', code: '', description: '', artistName: '' }); } });
+  const updateMutation = useMutation({ mutationFn: ({ id, data }: { id: string; data: any }) => api.patch(`/series/${id}`, data), onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['series'] }); setEditTarget(null); } });
   const archiveMutation = useMutation({ mutationFn: (seriesId: string) => api.put(`/series/${seriesId}/archive`), onSuccess: () => queryClient.invalidateQueries({ queryKey: ['series'] }) });
   const activateMutation = useMutation({ mutationFn: (seriesId: string) => api.put(`/series/${seriesId}/activate`), onSuccess: () => queryClient.invalidateQueries({ queryKey: ['series'] }) });
   const deleteMutation = useMutation({ mutationFn: (seriesId: string) => api.delete(`/series/${seriesId}`), onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['series'] }); queryClient.invalidateQueries({ queryKey: ['series-trash'] }); } });
@@ -109,12 +112,17 @@ export default function SeriesPage() {
                             <button onClick={() => handleRestore(s.series_id, s.name)} disabled={isActionPending} className="w-12 px-1 py-1 text-xs bg-status-blue-dim text-status-blue rounded hover:bg-status-blue/20 disabled:opacity-50 transition-all">복구</button>
                             <button onClick={() => handlePermanentDelete(s.series_id, s.name)} disabled={isActionPending} className="w-12 px-1 py-1 text-xs bg-status-red-dim text-status-red rounded hover:bg-status-red/20 disabled:opacity-50 transition-all">비우기</button>
                           </>
-                        ) : s.status === 'ACTIVE' ? (
-                          <button onClick={() => handleDeactivate(s.series_id, s.name)} disabled={isActionPending} className="w-12 px-1 py-1 text-xs bg-status-yellow-dim text-status-yellow rounded hover:bg-status-yellow/20 disabled:opacity-50 transition-all">비활성</button>
                         ) : (
                           <>
-                            <button onClick={() => handleActivate(s.series_id, s.name)} disabled={isActionPending} className="w-12 px-1 py-1 text-xs bg-status-green-dim text-status-green rounded hover:bg-status-green/20 disabled:opacity-50 transition-all">활성</button>
-                            <button onClick={() => handleDelete(s.series_id, s.name)} disabled={isActionPending} className="w-12 px-1 py-1 text-xs bg-status-red-dim text-status-red rounded hover:bg-status-red/20 disabled:opacity-50 transition-all">삭제</button>
+                            <button onClick={() => { setEditTarget({ series_id: s.series_id, name: s.name || '', code: s.code || '', description: s.description || '', artist_name: s.artist_name || '' }); setEditForm({ name: s.name || '', code: s.code || '', description: s.description || '', artistName: s.artist_name || '' }); }} disabled={isActionPending} className="w-12 px-1 py-1 text-xs bg-status-purple/10 text-status-purple rounded hover:bg-status-purple/20 disabled:opacity-50 transition-all">수정</button>
+                            {s.status === 'ACTIVE' ? (
+                              <button onClick={() => handleDeactivate(s.series_id, s.name)} disabled={isActionPending} className="w-12 px-1 py-1 text-xs bg-status-yellow-dim text-status-yellow rounded hover:bg-status-yellow/20 disabled:opacity-50 transition-all">비활성</button>
+                            ) : (
+                              <>
+                                <button onClick={() => handleActivate(s.series_id, s.name)} disabled={isActionPending} className="w-12 px-1 py-1 text-xs bg-status-green-dim text-status-green rounded hover:bg-status-green/20 disabled:opacity-50 transition-all">활성</button>
+                                <button onClick={() => handleDelete(s.series_id, s.name)} disabled={isActionPending} className="w-12 px-1 py-1 text-xs bg-status-red-dim text-status-red rounded hover:bg-status-red/20 disabled:opacity-50 transition-all">삭제</button>
+                              </>
+                            )}
                           </>
                         )}
                       </div>
@@ -124,6 +132,50 @@ export default function SeriesPage() {
               )}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* 수정 모달 */}
+      {editTarget && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center">
+          <div className="bg-geo-card border border-geo-border rounded-xl w-full max-w-sm">
+            <div className="bg-geo-main px-6 py-3 border-b border-geo-border rounded-t-xl flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-txt-primary">시리즈 수정</h2>
+              <button onClick={() => setEditTarget(null)} className="w-7 h-7 flex items-center justify-center rounded-lg text-txt-muted hover:text-txt-primary hover:bg-geo-card-hover transition-all">
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12" /></svg>
+              </button>
+            </div>
+            <form onSubmit={(e) => { e.preventDefault(); updateMutation.mutate({ id: editTarget.series_id, data: editForm }); }} className="p-6">
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs text-txt-secondary mb-1.5">시리즈 이름</label>
+                  <input value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} placeholder="시리즈 이름"
+                    className="w-full px-4 py-2.5 bg-geo-main border border-geo-border rounded-lg text-txt-primary placeholder-txt-muted focus:ring-2 focus:ring-status-purple/40 outline-none" autoFocus />
+                </div>
+                <div>
+                  <label className="block text-xs text-txt-secondary mb-1.5">시리즈 코드</label>
+                  <input value={editForm.code} onChange={(e) => setEditForm({ ...editForm, code: e.target.value })} placeholder="시리즈 코드"
+                    className="w-full px-4 py-2.5 bg-geo-main border border-geo-border rounded-lg text-txt-primary placeholder-txt-muted focus:ring-2 focus:ring-status-purple/40 outline-none" />
+                </div>
+                <div>
+                  <label className="block text-xs text-txt-secondary mb-1.5">아티스트</label>
+                  <input value={editForm.artistName} onChange={(e) => setEditForm({ ...editForm, artistName: e.target.value })} placeholder="아티스트명"
+                    className="w-full px-4 py-2.5 bg-geo-main border border-geo-border rounded-lg text-txt-primary placeholder-txt-muted focus:ring-2 focus:ring-status-purple/40 outline-none" />
+                </div>
+                <div>
+                  <label className="block text-xs text-txt-secondary mb-1.5">설명</label>
+                  <textarea value={editForm.description} onChange={(e) => setEditForm({ ...editForm, description: e.target.value })} placeholder="설명"
+                    className="w-full px-4 py-2.5 bg-geo-main border border-geo-border rounded-lg text-txt-primary placeholder-txt-muted focus:ring-2 focus:ring-status-purple/40 outline-none resize-none" rows={2} />
+                </div>
+              </div>
+              <div className="flex gap-2 mt-6">
+                <button type="button" onClick={() => setEditTarget(null)} className="flex-1 px-4 py-2.5 border border-geo-border rounded-lg text-txt-secondary hover:text-txt-primary transition-all">취소</button>
+                <button type="submit" disabled={updateMutation.isPending} className="flex-1 px-4 py-2.5 bg-status-purple text-white rounded-lg font-medium hover:bg-status-purple/80 transition-all disabled:opacity-50">
+                  {updateMutation.isPending ? '저장 중...' : '저장'}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
 
