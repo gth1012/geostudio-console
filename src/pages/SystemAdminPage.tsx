@@ -95,7 +95,10 @@ function ResetModal({ onClose }: { onClose: () => void }) {
           <div className="w-8 h-8 rounded-full bg-status-red/20 flex items-center justify-center">
             <svg className="w-4 h-4 text-status-red" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 9v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
           </div>
-          <h3 className="text-base font-semibold text-status-red">전체 데이터 초기화</h3>
+          <h3 className="text-base font-semibold text-status-red flex-1">전체 데이터 초기화</h3>
+          <button onClick={onClose} className="w-7 h-7 flex items-center justify-center rounded-lg text-txt-muted hover:text-txt-primary hover:bg-geo-card-hover transition-all">
+            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12" /></svg>
+          </button>
         </div>
 
         {result ? (
