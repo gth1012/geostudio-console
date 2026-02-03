@@ -10,6 +10,7 @@ import AssetsPage from './pages/AssetsPage';
 import ExportsPage from './pages/ExportsPage';
 import UsersPage from './pages/UsersPage';
 import AuditPage from './pages/AuditPage';
+import SystemAdminPage from './pages/SystemAdminPage';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuthStore();
@@ -38,6 +39,7 @@ export default function App() {
           <Route path="exports" element={<ExportsPage />} />
           <Route path="users" element={<UsersPage />} />
           <Route path="audit" element={<AuditPage />} />
+          <Route path="system-admin" element={<SystemAdminPage />} />
         </Route>
       </Routes>
     </BrowserRouter>
