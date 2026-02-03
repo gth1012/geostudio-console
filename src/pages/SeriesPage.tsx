@@ -3,17 +3,16 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../services/api';
 
 const MATERIAL_OPTIONS = [
-  { value: 'paper', label: '종이', method: '패턴·마이크로텍스트' },
-  { value: 'film', label: '필름', method: '패턴+대비제어' },
-  { value: 'fabric', label: '직물', method: '픽셀·실기반패턴' },
-  { value: 'leather', label: '가죽', method: '레이저음각' },
-  { value: 'metal', label: '금속', method: '레이저점·선' },
-  { value: 'wood', label: '우드', method: '레이저패턴' },
+  { value: 'paper_art', label: '종이 (아트지/스노우지)', carrier: 'PATTERN' },
+  { value: 'paper_eco', label: '종이 (친환경/FSC)', carrier: 'PATTERN' },
+  { value: 'film', label: '필름 (PET/PVC)', carrier: 'PATTERN' },
+  { value: 'fabric', label: '직물', carrier: 'PATTERN' },
+  { value: 'metal', label: '금속', carrier: 'ENGRAVING' },
+  { value: 'ceramic', label: '세라믹', carrier: 'ENGRAVING' },
 ] as const;
 
 const materialLabel = (v: string) => MATERIAL_OPTIONS.find(o => o.value === v)?.label || v;
-const materialMethod = (v: string) => MATERIAL_OPTIONS.find(o => o.value === v)?.method || '';
-
+const materialCarrier = (v: string) => MATERIAL_OPTIONS.find(o => o.value === v)?.carrier || 'PATTERN';
 function Tooltip({ text, children }: { text: string; children: React.ReactNode }) {
   const [show, setShow] = useState(false);
   const [isTruncated, setIsTruncated] = useState(false);
@@ -33,22 +32,32 @@ function Tooltip({ text, children }: { text: string; children: React.ReactNode }
   );
 }
 
+function CarrierGuideText({ material }: { material: string }) {
+  const carrier = materialCarrier(material);
+  const isPattern = carrier === 'PATTERN';
+  return (
+    <p className={`mt-2 text-xs font-medium ${isPattern ? 'text-status-green' : 'text-status-blue'}`}>
+      {isPattern ? '\u2705 패턴 기반 인증이 적용됩니다' : '\u2705 각인 기반 인증이 적용됩니다'}
+    </p>
+  );
+}
+
 export default function SeriesPage() {
   const [showModal, setShowModal] = useState(false);
   const [showTrash, setShowTrash] = useState(false);
-  const [form, setForm] = useState({ name: '', code: '', description: '', artistName: '', material: 'paper' });
+  const [form, setForm] = useState({ name: '', code: '', description: '', artistName: '', material: 'paper_art' });
   const [modalPos, setModalPos] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const dragOffset = useRef({ x: 0, y: 0 });
   const [editTarget, setEditTarget] = useState<{ series_id: string; name: string; code: string; description: string; artist_name: string; material: string } | null>(null);
-  const [editForm, setEditForm] = useState({ name: '', code: '', description: '', artistName: '', material: 'paper' });
+  const [editForm, setEditForm] = useState({ name: '', code: '', description: '', artistName: '', material: 'paper_art' });
   const queryClient = useQueryClient();
 
   const { data: series, isLoading } = useQuery({ queryKey: ['series'], queryFn: () => api.get('/series').then((res) => res.data.data), enabled: !showTrash });
   const { data: trashedSeries, isLoading: isTrashLoading } = useQuery({ queryKey: ['series-trash'], queryFn: () => api.get('/series/trash').then((res) => res.data.data), enabled: showTrash });
 
-  const createMutation = useMutation({ mutationFn: (data: any) => api.post('/series', { ...data, insertionMethod: materialMethod(data.material) }), onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['series'] }); setShowModal(false); setForm({ name: '', code: '', description: '', artistName: '', material: 'paper' }); } });
-  const updateMutation = useMutation({ mutationFn: ({ id, data }: { id: string; data: any }) => api.patch(`/series/${id}`, { ...data, insertion_method: materialMethod(data.material) }), onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['series'] }); setEditTarget(null); } });
+  const createMutation = useMutation({ mutationFn: (data: any) => api.post('/series', { ...data, insertionMethod: materialCarrier(data.material) }), onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['series'] }); setShowModal(false); setForm({ name: '', code: '', description: '', artistName: '', material: 'paper_art' }); } });
+  const updateMutation = useMutation({ mutationFn: ({ id, data }: { id: string; data: any }) => api.patch(`/series/${id}`, { ...data, insertion_method: materialCarrier(data.material) }), onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['series'] }); setEditTarget(null); } });
   const archiveMutation = useMutation({ mutationFn: (seriesId: string) => api.put(`/series/${seriesId}/archive`), onSuccess: () => queryClient.invalidateQueries({ queryKey: ['series'] }) });
   const activateMutation = useMutation({ mutationFn: (seriesId: string) => api.put(`/series/${seriesId}/activate`), onSuccess: () => queryClient.invalidateQueries({ queryKey: ['series'] }) });
   const deleteMutation = useMutation({ mutationFn: (seriesId: string) => api.delete(`/series/${seriesId}`), onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['series'] }); queryClient.invalidateQueries({ queryKey: ['series-trash'] }); } });
@@ -79,7 +88,7 @@ export default function SeriesPage() {
           )}
         </div>
         <button onClick={() => setShowTrash(!showTrash)} className={`px-4 py-2 text-sm font-medium rounded-lg border transition-all ${showTrash ? 'bg-status-purple text-white border-status-purple' : 'bg-transparent text-txt-secondary border-geo-border hover:border-geo-border-hover hover:text-txt-primary'}`}>
-          {showTrash ? '← 목록으로' : '🗑 휴지통'}
+          {showTrash ? '\u2190 목록으로' : '\uD83D\uDDD1 휴지통'}
         </button>
       </div>
 
@@ -95,7 +104,7 @@ export default function SeriesPage() {
                 <th className="w-24 px-3 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">코드</th>
                 <th className="w-24 px-3 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">아티스트</th>
                 <th className="w-28 px-3 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">설명</th>
-                <th className="w-16 px-3 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">재질</th>
+                <th className="w-20 px-3 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">재질</th>
                 <th className="w-20 px-3 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">{showTrash ? '삭제일' : '상태'}</th>
                 <th className="w-24 px-3 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">{showTrash ? '' : '생성일'}</th>
                 <th className="w-28 px-3 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">작업</th>
@@ -112,7 +121,7 @@ export default function SeriesPage() {
                     <td className="px-3 py-3 text-center text-txt-secondary overflow-visible"><Tooltip text={s.code || ''}><span className="block truncate">{s.code || '-'}</span></Tooltip></td>
                     <td className="px-3 py-3 text-center text-txt-secondary overflow-visible"><Tooltip text={s.artist_name || ''}><span className="block truncate">{s.artist_name || '-'}</span></Tooltip></td>
                     <td className="px-3 py-3 text-center text-txt-muted overflow-visible"><Tooltip text={s.description || ''}><span className="block truncate">{s.description || '-'}</span></Tooltip></td>
-                    <td className="px-3 py-3 text-center text-txt-secondary text-xs">{materialLabel(s.material || 'paper')}</td>
+                    <td className="px-3 py-3 text-center text-txt-secondary text-xs">{materialLabel(s.material || 'paper_art')}</td>
                     <td className="px-3 py-3 text-center">
                       {showTrash ? <span className="text-txt-muted text-xs">{new Date(s.deleted_at).toLocaleDateString()}</span> : (
                         <span className={`inline-block w-16 px-1 py-1 rounded text-xs font-medium text-center ${s.status === 'ACTIVE' ? 'bg-status-green-dim text-status-green' : 'bg-status-yellow-dim text-status-yellow'}`}>{s.status === 'ACTIVE' ? 'Active' : 'Inactive'}</span>
@@ -128,7 +137,7 @@ export default function SeriesPage() {
                           </>
                         ) : (
                           <>
-                            <button onClick={() => { setEditTarget({ series_id: s.series_id, name: s.name || '', code: s.code || '', description: s.description || '', artist_name: s.artist_name || '', material: s.material || 'paper' }); setEditForm({ name: s.name || '', code: s.code || '', description: s.description || '', artistName: s.artist_name || '', material: s.material || 'paper' }); }} disabled={isActionPending} className="w-12 px-1 py-1 text-xs bg-status-purple/10 text-status-purple rounded hover:bg-status-purple/20 disabled:opacity-50 transition-all">수정</button>
+                            <button onClick={() => { setEditTarget({ series_id: s.series_id, name: s.name || '', code: s.code || '', description: s.description || '', artist_name: s.artist_name || '', material: s.material || 'paper_art' }); setEditForm({ name: s.name || '', code: s.code || '', description: s.description || '', artistName: s.artist_name || '', material: s.material || 'paper_art' }); }} disabled={isActionPending} className="w-12 px-1 py-1 text-xs bg-status-purple/10 text-status-purple rounded hover:bg-status-purple/20 disabled:opacity-50 transition-all">수정</button>
                             {s.status === 'ACTIVE' ? (
                               <button onClick={() => handleDeactivate(s.series_id, s.name)} disabled={isActionPending} className="w-12 px-1 py-1 text-xs bg-status-yellow-dim text-status-yellow rounded hover:bg-status-yellow/20 disabled:opacity-50 transition-all">비활성</button>
                             ) : (
@@ -179,8 +188,9 @@ export default function SeriesPage() {
                 <div>
                   <label className="block text-xs text-txt-secondary mb-1.5">재질 *</label>
                   <select value={editForm.material} onChange={(e) => setEditForm({ ...editForm, material: e.target.value })} className="w-full px-4 py-2.5 bg-geo-main border border-geo-border rounded-lg text-txt-primary focus:ring-2 focus:ring-status-purple/40 outline-none">
-                    {MATERIAL_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label} — {o.method}</option>)}
+                    {MATERIAL_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                   </select>
+                  <CarrierGuideText material={editForm.material} />
                 </div>
                 <div>
                   <label className="block text-xs text-txt-secondary mb-1.5">설명</label>
@@ -222,8 +232,9 @@ export default function SeriesPage() {
                 <div>
                   <label className="block text-xs text-txt-secondary mb-1.5">재질 *</label>
                   <select value={form.material} onChange={(e) => setForm({ ...form, material: e.target.value })} className="w-full px-4 py-2.5 bg-geo-main border border-geo-border rounded-lg text-txt-primary focus:ring-2 focus:ring-status-purple/40 outline-none" required>
-                    {MATERIAL_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label} — {o.method}</option>)}
+                    {MATERIAL_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                   </select>
+                  <CarrierGuideText material={form.material} />
                 </div>
                 <div>
                   <label className="block text-xs text-txt-secondary mb-1.5">설명</label>
