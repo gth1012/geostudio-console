@@ -61,20 +61,20 @@ export default function BatchDetailPage() {
         {assetsLoading ? <p className="p-6 text-txt-secondary">로딩 중...</p> : assets?.length === 0 ? (
           <p className="p-6 text-txt-muted text-center text-sm">자산이 없습니다. [+ 자산 생성] 버튼을 눌러 자산을 생성하세요.</p>
         ) : (
-          <table className="w-full">
+          <table className="w-full table-fixed">
             <thead><tr className="border-b border-geo-border">
-              <th className="px-4 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">No</th>
-              <th className="px-4 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">DINA ID</th>
-              <th className="px-4 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">상태</th>
-              <th className="px-4 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">생성일</th>
+              <th className="w-16 px-3 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">No</th>
+              <th className="px-3 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">DINA ID</th>
+              <th className="w-24 px-3 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">상태</th>
+              <th className="w-24 px-3 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">생성일</th>
             </tr></thead>
             <tbody>
               {assets?.map((asset: any, index: number) => (
                 <tr key={asset.asset_id} className="border-b border-geo-border/50 last:border-0 dark-table-row transition-colors">
-                  <td className="px-4 py-3 text-center text-txt-muted font-mono">{index + 1}</td>
-                  <td className="px-4 py-3 text-center font-mono text-status-blue text-sm">{asset.dina_id}</td>
-                  <td className="px-4 py-3 text-center"><span className={`px-2 py-1 rounded text-xs font-medium font-mono ${getStatusBadge(asset.status)}`}>{asset.status}</span></td>
-                  <td className="px-4 py-3 text-center text-txt-muted text-sm">{new Date(asset.created_at).toLocaleDateString()}</td>
+                  <td className="px-3 py-3 text-center text-txt-muted font-mono">{index + 1}</td>
+                  <td className="px-3 py-3 text-center font-mono text-status-blue text-sm truncate">{asset.dina_id}</td>
+                  <td className="px-3 py-3 text-center"><span className={`inline-block w-20 px-1 py-1 rounded text-xs font-medium text-center ${getStatusBadge(asset.status)}`}>{asset.status}</span></td>
+                  <td className="px-3 py-3 text-center text-txt-muted text-xs">{new Date(asset.created_at).toLocaleDateString()}</td>
                 </tr>
               ))}
             </tbody>
