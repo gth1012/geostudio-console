@@ -66,7 +66,7 @@ export default function AssetsPage() {
               {assets?.map((a: any) => (
                 <tr key={a.asset_id} className="border-b border-geo-border/50 last:border-0 dark-table-row transition-colors">
                   <td className="px-6 py-4 text-txt-muted font-mono">#{a.asset_number}</td>
-                  <td className="px-6 py-4 font-mono text-sm text-status-blue">{a.dina_code}</td>
+                  <td className="px-6 py-4 font-mono text-sm text-status-blue">{a.dina_id}</td>
                   <td className="px-6 py-4 font-mono text-sm text-txt-secondary">{a.otp_code}</td>
                   <td className="px-6 py-4 text-txt-secondary">{a.series_name}</td>
                   <td className="px-6 py-4"><span className={`px-2 py-1 rounded text-xs font-medium font-mono ${getStatusBadge(a.status)}`}>{a.status}</span></td>
