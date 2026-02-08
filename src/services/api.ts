@@ -21,7 +21,7 @@ api.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       useAuthStore.getState().logout();
-      window.location.href = '/geostudio-console/login';
+      window.location.hash = '#/login';
     }
     return Promise.reject(error);
   }

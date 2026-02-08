@@ -1,4 +1,4 @@
-﻿import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+﻿import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthStore } from './stores/auth.store';
 import Layout from './components/Layout';
 import LoginPage from './pages/LoginPage';
@@ -19,7 +19,7 @@ function PrivateRoute({ children }: { children: React.ReactNode }) {
 
 export default function App() {
   return (
-    <BrowserRouter basename='/geostudio-console'
+    <HashRouter
       future={{
         v7_startTransition: true,
         v7_relativeSplatPath: true,
@@ -42,7 +42,7 @@ export default function App() {
           <Route path="system-admin" element={<SystemAdminPage />} />
         </Route>
       </Routes>
-    </BrowserRouter>
+    </HashRouter>
   );
 }
 
