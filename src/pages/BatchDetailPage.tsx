@@ -1,9 +1,10 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { QRCodeSVG } from 'qrcode.react';
 import api from '../services/api';
 import { useToastStore } from '../stores/toast.store';
+import type { ChangeEvent } from 'react';
 
 export default function BatchDetailPage() {
   const { id } = useParams();
@@ -49,6 +50,36 @@ export default function BatchDetailPage() {
     enabled: !!id,
     refetchInterval: 30000,
   });
+
+  const referenceInputRef = useRef<HTMLInputElement>(null);
+  const [uploadingReference, setUploadingReference] = useState(false);
+
+  const uploadReferenceMutation = useMutation({
+    mutationFn: async ({ assetId, file }: { assetId: string; file: File }) => {
+      const formData = new FormData();
+      formData.append('image', file);
+      return api.post(`/assets/${assetId}/reference`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+    },
+    onSuccess: (res) => {
+      queryClient.invalidateQueries({ queryKey: ['assets', id] });
+      toast.show(`기준 이미지 등록 완료 (pHash: ${res.data.data.phash?.substring(0, 8)}...)`, 'success');
+      setUploadingReference(false);
+    },
+    onError: (err: any) => {
+      toast.show(err.response?.data?.message || '기준 이미지 등록 실패', 'error');
+      setUploadingReference(false);
+    },
+  });
+
+  const handleReferenceUpload = useCallback((e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !selectedAsset) return;
+    setUploadingReference(true);
+    uploadReferenceMutation.mutate({ assetId: selectedAsset.asset_id, file });
+    e.target.value = '';
+  }, [selectedAsset, uploadReferenceMutation]);
 
   const handleCreateAssets = () => { if (!batch) return; createAssetsMutation.mutate({ batchId: batch.batch_id, seriesId: batch.series_id, count: parseInt(assetCount) }); };
   const handleMouseDown = (e: React.MouseEvent) => { const tag = (e.target as HTMLElement).tagName; if (['INPUT','TEXTAREA','SELECT','BUTTON','A'].includes(tag)) return; setIsDragging(true); dragOffset.current = { x: e.clientX - modalPos.x, y: e.clientY - modalPos.y }; };
@@ -256,7 +287,21 @@ export default function BatchDetailPage() {
               </div>
             </div>
           </div>
-          <div className="p-6 border-t border-geo-border">
+          <div className="p-6 border-t border-geo-border space-y-3">
+            <input
+              ref={referenceInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              onChange={handleReferenceUpload}
+              className="hidden"
+            />
+            <button
+              onClick={() => referenceInputRef.current?.click()}
+              disabled={uploadingReference}
+              className="w-full px-4 py-2.5 bg-status-green text-white rounded-lg font-medium hover:bg-status-green/80 transition-all disabled:opacity-50"
+            >
+              {uploadingReference ? '업로드 중...' : '📷 기준 이미지 등록'}
+            </button>
             <button onClick={handleDownloadQR} className="w-full px-4 py-2.5 bg-status-purple text-white rounded-lg font-medium hover:bg-status-purple/80 transition-all">
               QR 다운로드
             </button>
