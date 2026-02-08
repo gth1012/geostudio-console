@@ -2,6 +2,7 @@ import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../services/api';
+import { useToastStore } from '../stores/toast.store';
 
 export default function BatchesPage() {
   const [showModal, setShowModal] = useState(false);
@@ -15,22 +16,26 @@ export default function BatchesPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
+  const toast = useToastStore();
   const { data: batches, isLoading } = useQuery({ queryKey: ['batches'], queryFn: () => api.get('/batches').then((res) => res.data.data) });
   const { data: series } = useQuery({ queryKey: ['series'], queryFn: () => api.get('/series').then((res) => res.data.data) });
 
   const createMutation = useMutation({
     mutationFn: (data: any) => api.post('/batches', data),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['batches'] }); setShowModal(false); setForm({ seriesId: '', totalAssets: '' }); },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['batches'] }); setShowModal(false); setForm({ seriesId: '', totalAssets: '' }); toast.show('배치가 생성되었습니다', 'success'); },
+    onError: (err: any) => { toast.show(err.response?.data?.message || '배치 생성 실패', 'error'); },
   });
 
   const updateMutation = useMutation({
     mutationFn: ({ id, name }: { id: string; name: string }) => api.patch(`/batches/${id}`, { name }),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['batches'] }); setEditTarget(null); },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['batches'] }); setEditTarget(null); toast.show('배치가 수정되었습니다', 'success'); },
+    onError: (err: any) => { toast.show(err.response?.data?.message || '배치 수정 실패', 'error'); },
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => api.delete(`/batches/${id}`),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['batches'] }); setDeleteTarget(null); },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['batches'] }); setDeleteTarget(null); toast.show('배치가 삭제되었습니다', 'success'); },
+    onError: (err: any) => { toast.show(err.response?.data?.message || '배치 삭제 실패', 'error'); },
   });
 
   const handleSubmit = (e: React.FormEvent) => { e.preventDefault(); createMutation.mutate({ ...form, totalAssets: form.totalAssets ? parseInt(form.totalAssets) : 0 }); };
@@ -39,8 +44,13 @@ export default function BatchesPage() {
   const handleMouseUp = () => { if (isDragging) setIsDragging(false); };
 
   const getStatusBadge = (status: string) => {
-    const map: Record<string, string> = { COMPLETED: 'bg-status-green-dim text-status-green', IN_PROGRESS: 'bg-status-yellow-dim text-status-yellow', FAILED: 'bg-status-red-dim text-status-red', DRAFT: 'bg-status-yellow-dim text-status-yellow', LOCKED: 'bg-status-red-dim text-status-red' };
+    const map: Record<string, string> = { COMPLETED: 'bg-status-green-dim text-status-green', IN_PROGRESS: 'bg-status-yellow-dim text-status-yellow', FAILED: 'bg-status-red-dim text-status-red', DRAFT: 'bg-status-yellow-dim text-status-yellow', LOCKED: 'bg-status-purple-dim text-status-purple', SHIPPED: 'bg-status-green-dim text-status-green' };
     return map[status] || 'bg-status-yellow-dim text-status-yellow';
+  };
+
+  const getStatusLabel = (status: string) => {
+    const map: Record<string, string> = { DRAFT: '임시 저장', IN_PROGRESS: '진행 중', COMPLETED: '완료', SHIPPED: '출고 완료', FAILED: '실패', LOCKED: '확정' };
+    return map[status] || status;
   };
 
   return (
@@ -55,25 +65,26 @@ export default function BatchesPage() {
           <table className="w-full table-fixed">
             <thead>
               <tr className="border-b border-geo-border">
-                <th className="w-24 px-3 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">ID</th>
-                <th className="w-28 px-3 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">시리즈</th>
-                <th className="w-24 px-3 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">코드</th>
-                <th className="w-20 px-3 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">자산수</th>
-                <th className="w-20 px-3 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">상태</th>
-                <th className="w-24 px-3 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">생성일</th>
-                <th className="w-32 px-3 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">액션</th>
+                <th className="w-[12%] px-4 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">ID</th>
+                <th className="w-[20%] px-4 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">시리즈</th>
+                <th className="w-[12%] px-4 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">자산수</th>
+                <th className="w-[22%] px-4 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">상태</th>
+                <th className="w-[14%] px-4 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">생성일</th>
+                <th className="w-[20%] px-4 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">액션</th>
               </tr>
             </thead>
             <tbody>
               {batches?.map((b: any) => (
                 <tr key={b.batch_id} className="border-b border-geo-border/50 last:border-0 dark-table-row transition-colors">
-                  <td className="px-3 py-3 text-center font-mono text-sm text-status-blue">{b.display_id || '-'}</td>
-                  <td className="px-3 py-3 text-center text-txt-primary truncate">{b.series_name || '-'}</td>
-                  <td className="px-3 py-3 text-center text-txt-secondary font-mono truncate">{b.series_code || '-'}</td>
-                  <td className="px-3 py-3 text-center text-txt-primary font-mono">{b.items_completed}/{b.items_total}</td>
+                  <td className="px-4 py-3 text-center font-mono text-sm text-status-blue">{b.display_id || '-'}</td>
+                  <td className="px-4 py-3 text-center text-txt-primary truncate">{b.series_name || '-'}</td>
+                  <td className="px-4 py-3 text-center text-txt-primary font-mono">{b.items_completed}/{b.items_total}</td>
                   <td className="px-3 py-3 text-center">
-                    <div className="flex justify-center items-center gap-1">
-                      <span className={`inline-block w-16 px-1 py-1 rounded text-xs font-medium text-center ${getStatusBadge(b.status)}`}>{b.status}</span>
+                    <div className="flex justify-center items-center gap-1 flex-wrap">
+                      <span className={`inline-block w-16 px-1 py-1 rounded text-xs font-medium text-center ${getStatusBadge(b.status)}`}>{getStatusLabel(b.status)}</span>
+                      <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-medium ${b.batch_reference_status === 'LOCKED' ? 'bg-status-green-dim text-status-green' : 'bg-status-yellow-dim text-status-yellow'}`}>
+                        {b.batch_reference_status === 'LOCKED' ? '기준:확정' : '기준:미확정'}
+                      </span>
                       {b.batch_locked_until && new Date(b.batch_locked_until) > new Date() && (
                         <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-bold bg-status-red/20 text-status-red border border-status-red/30 animate-pulse">LOCKED</span>
                       )}
@@ -92,7 +103,7 @@ export default function BatchesPage() {
                   </td>
                 </tr>
               ))}
-              {!batches?.length && <tr><td colSpan={7} className="px-6 py-8 text-center text-txt-muted">배치가 없습니다</td></tr>}
+              {!batches?.length && <tr><td colSpan={6} className="px-6 py-8 text-center text-txt-muted">배치가 없습니다</td></tr>}
             </tbody>
           </table>
         </div>

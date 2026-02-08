@@ -21,10 +21,15 @@ export default function ExportsPage() {
   const getStatusBadge = (status: string) => {
     const map: Record<string, string> = {
       SHIPPED: 'bg-status-green-dim text-status-green',
-      LOCKED: 'bg-status-blue-dim text-status-blue',
+      LOCKED: 'bg-status-purple-dim text-status-purple',
       DRAFT: 'bg-status-yellow-dim text-status-yellow',
     };
     return map[status] || 'bg-status-gray-dim text-status-gray';
+  };
+
+  const getStatusLabel = (status: string) => {
+    const map: Record<string, string> = { DRAFT: '임시저장', IN_PROGRESS: '진행중', COMPLETED: '완료', SHIPPED: '출고완료', FAILED: '실패', LOCKED: '확정' };
+    return map[status] || status;
   };
 
   const formatDate = (dateStr: string) => {
@@ -71,8 +76,8 @@ export default function ExportsPage() {
                   <td className="px-6 py-4 text-txt-secondary font-mono text-sm">{s.lot_id}</td>
                   <td className="px-6 py-4 text-txt-secondary font-mono text-sm">{s.shipment_id}</td>
                   <td className="px-6 py-4">
-                    <span className={`px-2 py-1 rounded text-xs font-medium font-mono ${getStatusBadge(s.status)}`}>
-                      {s.status}
+                    <span className={`px-2 py-1 rounded text-xs font-medium ${getStatusBadge(s.status)}`}>
+                      {getStatusLabel(s.status)}
                     </span>
                   </td>
                 </tr>

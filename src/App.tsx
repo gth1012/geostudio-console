@@ -1,6 +1,7 @@
 ﻿import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthStore } from './stores/auth.store';
 import Layout from './components/Layout';
+import Toast from './components/Toast';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
 import SeriesPage from './pages/SeriesPage';
@@ -19,30 +20,33 @@ function PrivateRoute({ children }: { children: React.ReactNode }) {
 
 export default function App() {
   return (
-    <HashRouter
-      future={{
-        v7_startTransition: true,
-        v7_relativeSplatPath: true,
-      }}
-    >
-      <Routes>
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/" element={
-          <PrivateRoute>
-            <Layout />
-          </PrivateRoute>
-        }>
-          <Route index element={<DashboardPage />} />
-          <Route path="series" element={<SeriesPage />} />
-          <Route path="batches" element={<BatchesPage />} /><Route path="batches/:id" element={<BatchDetailPage />} />
-          <Route path="assets" element={<AssetsPage />} />
-          <Route path="exports" element={<ExportsPage />} />
-          <Route path="users" element={<UsersPage />} />
-          <Route path="audit" element={<AuditPage />} />
-          <Route path="system-admin" element={<SystemAdminPage />} />
-        </Route>
-      </Routes>
-    </HashRouter>
+    <>
+      <Toast />
+      <HashRouter
+        future={{
+          v7_startTransition: true,
+          v7_relativeSplatPath: true,
+        }}
+      >
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/" element={
+            <PrivateRoute>
+              <Layout />
+            </PrivateRoute>
+          }>
+            <Route index element={<DashboardPage />} />
+            <Route path="series" element={<SeriesPage />} />
+            <Route path="batches" element={<BatchesPage />} /><Route path="batches/:id" element={<BatchDetailPage />} />
+            <Route path="assets" element={<AssetsPage />} />
+            <Route path="exports" element={<ExportsPage />} />
+            <Route path="users" element={<UsersPage />} />
+            <Route path="audit" element={<AuditPage />} />
+            <Route path="system-admin" element={<SystemAdminPage />} />
+          </Route>
+        </Routes>
+      </HashRouter>
+    </>
   );
 }
 

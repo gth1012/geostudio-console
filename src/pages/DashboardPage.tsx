@@ -20,11 +20,11 @@ export default function DashboardPage() {
   const getStatusLabel = (status: string) => {
     const map: Record<string, string> = {
       DRAFT: '임시 저장',
-      IN_PROGRESS: '처리 중',
+      IN_PROGRESS: '진행 중',
       COMPLETED: '완료',
       SHIPPED: '출고 완료',
       FAILED: '실패',
-      LOCKED: '잠금',
+      LOCKED: '확정',
     };
     return map[status] || status;
   };

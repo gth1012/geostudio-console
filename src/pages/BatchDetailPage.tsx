@@ -1,7 +1,9 @@
 import { useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { QRCodeSVG } from 'qrcode.react';
 import api from '../services/api';
+import { useToastStore } from '../stores/toast.store';
 
 export default function BatchDetailPage() {
   const { id } = useParams();
@@ -13,25 +15,32 @@ export default function BatchDetailPage() {
   const [isDragging, setIsDragging] = useState(false);
   const dragOffset = useRef({ x: 0, y: 0 });
 
+  const toast = useToastStore();
   const { data: batch, isLoading: batchLoading } = useQuery({ queryKey: ['batch', id], queryFn: () => api.get(`/batches/${id}`).then((res) => res.data.data) });
   const { data: assets, isLoading: assetsLoading } = useQuery({ queryKey: ['assets', id], queryFn: () => api.get(`/assets?batchId=${id}`).then((res) => res.data.data), enabled: !!id });
 
   const [showLockConfirm, setShowLockConfirm] = useState(false);
   const [showUnlockConfirm, setShowUnlockConfirm] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [qrDinaId, setQrDinaId] = useState<string | null>(null);
+  const ITEMS_PER_PAGE = 50;
 
   const createAssetsMutation = useMutation({
     mutationFn: (data: { batchId: string; seriesId: string; count: number }) => api.post('/assets/bulk', data),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['assets', id] }); queryClient.invalidateQueries({ queryKey: ['batch', id] }); setShowAssetModal(false); setAssetCount('100'); },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['assets', id] }); queryClient.invalidateQueries({ queryKey: ['batch', id] }); setShowAssetModal(false); setAssetCount('100'); toast.show('자산이 생성되었습니다', 'success'); },
+    onError: (err: any) => { toast.show(err.response?.data?.message || '자산 생성 실패', 'error'); },
   });
 
   const lockMutation = useMutation({
     mutationFn: (batchId: string) => api.post(`/batches/${batchId}/lock`),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['batch', id] }); queryClient.invalidateQueries({ queryKey: ['assets', id] }); setShowLockConfirm(false); },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['batch', id] }); queryClient.invalidateQueries({ queryKey: ['assets', id] }); setShowLockConfirm(false); toast.show('배치가 확정되었습니다', 'success'); },
+    onError: (err: any) => { toast.show(err.response?.data?.message || '배치 확정 실패', 'error'); },
   });
 
   const unlockMutation = useMutation({
     mutationFn: (batchId: string) => api.post(`/geocam/admin/unlock-batch/${batchId}`),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['batch', id] }); queryClient.invalidateQueries({ queryKey: ['anomaly', id] }); setShowUnlockConfirm(false); },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['batch', id] }); queryClient.invalidateQueries({ queryKey: ['anomaly', id] }); setShowUnlockConfirm(false); toast.show('잠금이 해제되었습니다', 'success'); },
+    onError: (err: any) => { toast.show(err.response?.data?.message || '잠금 해제 실패', 'error'); },
   });
 
   const { data: anomalyStatus } = useQuery({
@@ -47,8 +56,33 @@ export default function BatchDetailPage() {
   const handleMouseUp = () => { if (isDragging) setIsDragging(false); };
 
   const getStatusBadge = (status: string) => {
-    const map: Record<string, string> = { COMPLETED: 'bg-status-green-dim text-status-green', PROCESSING: 'bg-status-blue-dim text-status-blue', CREATED: 'bg-status-yellow-dim text-status-yellow', FAILED: 'bg-status-red-dim text-status-red', DRAFT: 'bg-status-yellow-dim text-status-yellow', LOCKED: 'bg-status-red-dim text-status-red', QR_GENERATED: 'bg-status-green-dim text-status-green', DINA_INSERTED: 'bg-status-blue-dim text-status-blue', EXPORTED: 'bg-status-purple-dim text-status-purple' };
+    const map: Record<string, string> = { COMPLETED: 'bg-status-green-dim text-status-green', PROCESSING: 'bg-status-blue-dim text-status-blue', CREATED: 'bg-status-yellow-dim text-status-yellow', FAILED: 'bg-status-red-dim text-status-red', DRAFT: 'bg-status-yellow-dim text-status-yellow', LOCKED: 'bg-status-purple-dim text-status-purple', SHIPPED: 'bg-status-green-dim text-status-green', QR_GENERATED: 'bg-status-green-dim text-status-green', DINA_INSERTED: 'bg-status-blue-dim text-status-blue', EXPORTED: 'bg-status-purple-dim text-status-purple', ISSUED: 'bg-status-green-dim text-status-green' };
     return map[status] || 'bg-status-yellow-dim text-status-yellow';
+  };
+
+  const getStatusLabel = (status: string) => {
+    const map: Record<string, string> = { DRAFT: '임시저장', IN_PROGRESS: '진행중', COMPLETED: '완료', SHIPPED: '출고완료', FAILED: '실패', LOCKED: '확정', CREATED: '생성됨', PROCESSING: '처리중', QR_GENERATED: 'QR생성', DINA_INSERTED: 'DINA삽입', EXPORTED: '출고됨', ISSUED: '발급완료' };
+    return map[status] || status;
+  };
+
+  const handleDownloadQR = () => {
+    if (!qrDinaId) return;
+    const svg = document.getElementById('qr-code-svg');
+    if (!svg) return;
+    const svgData = new XMLSerializer().serializeToString(svg);
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    const img = new Image();
+    img.onload = () => {
+      canvas.width = img.width;
+      canvas.height = img.height;
+      ctx?.drawImage(img, 0, 0);
+      const a = document.createElement('a');
+      a.download = `${qrDinaId}.png`;
+      a.href = canvas.toDataURL('image/png');
+      a.click();
+    };
+    img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)));
   };
 
   if (batchLoading) return <p className="text-txt-secondary">로딩 중...</p>;
@@ -60,7 +94,10 @@ export default function BatchDetailPage() {
         <div className="flex items-center gap-4">
           <button onClick={() => navigate('/batches')} className="px-3 py-2 text-sm border border-geo-border text-txt-secondary rounded-lg hover:text-txt-primary hover:border-geo-border-hover transition-all">← 목록</button>
           <h1 className="text-xl font-semibold text-txt-primary">{batch.display_id || batch.batch_id}</h1>
-          <span className={`px-3 py-1 rounded text-xs font-medium font-mono ${getStatusBadge(batch.status)}`}>{batch.status}</span>
+          <span className={`px-3 py-1 rounded text-xs font-medium ${getStatusBadge(batch.status)}`}>{getStatusLabel(batch.status)}</span>
+          <span className={`px-2 py-1 rounded text-xs font-medium ${batch.batch_reference_status === 'LOCKED' ? 'bg-status-green-dim text-status-green' : 'bg-status-yellow-dim text-status-yellow'}`}>
+            {batch.batch_reference_status === 'LOCKED' ? '기준: 확정' : '기준: 미확정'}
+          </span>
           {batch.batch_locked_until && new Date(batch.batch_locked_until) > new Date() && (
             <span className="px-2 py-1 rounded text-xs font-bold bg-status-red/20 text-status-red border border-status-red/30 animate-pulse">LOCKED</span>
           )}
@@ -131,26 +168,52 @@ export default function BatchDetailPage() {
         {assetsLoading ? <p className="p-6 text-txt-secondary">로딩 중...</p> : assets?.length === 0 ? (
           <p className="p-6 text-txt-muted text-center text-sm">자산이 없습니다. [+ 자산 생성] 버튼을 눌러 자산을 생성하세요.</p>
         ) : (
-          <table className="w-full table-fixed">
-            <thead><tr className="border-b border-geo-border">
-              <th className="w-16 px-3 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">No</th>
-              <th className="px-3 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">DINA ID</th>
-              <th className="w-32 px-3 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">에디션</th>
-              <th className="w-24 px-3 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">상태</th>
-              <th className="w-24 px-3 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">생성일</th>
-            </tr></thead>
-            <tbody>
-              {assets?.map((asset: any, index: number) => (
-                <tr key={asset.asset_id} className="border-b border-geo-border/50 last:border-0 dark-table-row transition-colors">
-                  <td className="px-3 py-3 text-center text-txt-muted font-mono">{index + 1}</td>
-                  <td className="px-3 py-3 text-center font-mono text-status-blue text-sm truncate">{asset.dina_id}</td>
-                  <td className="px-3 py-3 text-center font-mono text-sm text-txt-primary">{asset.edition ? `#${String(asset.edition).padStart(5, '0')} / ${(batch.series?.total_count || 0).toLocaleString()}` : <span className="text-txt-muted">-</span>}</td>
-                  <td className="px-3 py-3 text-center"><span className={`inline-block w-20 px-1 py-1 rounded text-xs font-medium text-center ${getStatusBadge(asset.status)}`}>{asset.status}</span></td>
-                  <td className="px-3 py-3 text-center text-txt-muted text-xs">{new Date(asset.created_at).toLocaleDateString()}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <>
+            <table className="w-full table-fixed">
+              <thead><tr className="border-b border-geo-border">
+                <th className="w-16 px-3 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">No</th>
+                <th className="px-3 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">DINA ID</th>
+                <th className="w-32 px-3 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">에디션</th>
+                <th className="w-24 px-3 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">상태</th>
+                <th className="w-24 px-3 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">생성일</th>
+              </tr></thead>
+              <tbody>
+                {assets?.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE).map((asset: any, index: number) => (
+                  <tr key={asset.asset_id} className="border-b border-geo-border/50 last:border-0 dark-table-row transition-colors">
+                    <td className="px-3 py-3 text-center text-txt-muted font-mono">{(currentPage - 1) * ITEMS_PER_PAGE + index + 1}</td>
+                    <td className="px-3 py-3 text-center font-mono text-status-blue text-sm truncate cursor-pointer hover:underline" onClick={() => setQrDinaId(asset.dina_id)}>{asset.dina_id}</td>
+                    <td className="px-3 py-3 text-center font-mono text-sm text-txt-primary">{asset.edition ? `#${String(asset.edition).padStart(5, '0')} / ${(batch.series?.total_count || 0).toLocaleString()}` : <span className="text-txt-muted">-</span>}</td>
+                    <td className="px-3 py-3 text-center"><span className={`inline-block w-20 px-1 py-1 rounded text-xs font-medium text-center ${getStatusBadge(asset.status)}`}>{getStatusLabel(asset.status)}</span></td>
+                    <td className="px-3 py-3 text-center text-txt-muted text-xs">{new Date(asset.created_at).toLocaleDateString()}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {/* 페이지네이션 */}
+            {assets && assets.length > ITEMS_PER_PAGE && (() => {
+              const totalPages = Math.ceil(assets.length / ITEMS_PER_PAGE);
+              const pageGroup = Math.floor((currentPage - 1) / 10);
+              const startPage = pageGroup * 10 + 1;
+              const endPage = Math.min(startPage + 9, totalPages);
+              const pages = Array.from({ length: endPage - startPage + 1 }, (_, i) => startPage + i);
+              return (
+                <div className="px-6 py-4 border-t border-geo-border flex justify-center items-center gap-1">
+                  <button onClick={() => setCurrentPage(1)} disabled={currentPage === 1}
+                    className="px-2 py-1 text-xs font-medium text-txt-secondary border border-geo-border rounded hover:bg-geo-card-hover disabled:opacity-30 disabled:cursor-not-allowed transition-all">{'<<'}</button>
+                  <button onClick={() => setCurrentPage(Math.max(1, currentPage - 10))} disabled={currentPage <= 10}
+                    className="px-2 py-1 text-xs font-medium text-txt-secondary border border-geo-border rounded hover:bg-geo-card-hover disabled:opacity-30 disabled:cursor-not-allowed transition-all">{'<'}</button>
+                  {pages.map((page) => (
+                    <button key={page} onClick={() => setCurrentPage(page)}
+                      className={`w-8 py-1 text-xs font-medium rounded transition-all ${currentPage === page ? 'bg-status-purple text-white' : 'text-txt-secondary border border-geo-border hover:bg-geo-card-hover'}`}>{page}</button>
+                  ))}
+                  <button onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 10))} disabled={currentPage > totalPages - 10}
+                    className="px-2 py-1 text-xs font-medium text-txt-secondary border border-geo-border rounded hover:bg-geo-card-hover disabled:opacity-30 disabled:cursor-not-allowed transition-all">{'>'}</button>
+                  <button onClick={() => setCurrentPage(totalPages)} disabled={currentPage === totalPages}
+                    className="px-2 py-1 text-xs font-medium text-txt-secondary border border-geo-border rounded hover:bg-geo-card-hover disabled:opacity-30 disabled:cursor-not-allowed transition-all">{'>>'}</button>
+                </div>
+              );
+            })()}
+          </>
         )}
       </div>
 
@@ -218,6 +281,27 @@ export default function BatchDetailPage() {
                 <button onClick={handleCreateAssets} disabled={createAssetsMutation.isPending} className="flex-1 px-4 py-2.5 bg-status-purple text-white rounded-lg font-medium hover:bg-status-purple/80 disabled:opacity-50 transition-all">{createAssetsMutation.isPending ? '생성 중...' : '생성'}</button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* QR 코드 모달 */}
+      {qrDinaId && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center" onClick={() => setQrDinaId(null)}>
+          <div className="bg-geo-card border border-geo-border rounded-xl w-full max-w-xs p-6" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-base font-semibold text-txt-primary">QR 코드</h3>
+              <button onClick={() => setQrDinaId(null)} className="w-7 h-7 flex items-center justify-center rounded-lg text-txt-muted hover:text-txt-primary hover:bg-geo-card-hover transition-all">
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12" /></svg>
+              </button>
+            </div>
+            <div className="bg-white p-4 rounded-lg flex justify-center mb-4">
+              <QRCodeSVG id="qr-code-svg" value={qrDinaId} size={180} level="H" />
+            </div>
+            <p className="text-center font-mono text-sm text-txt-secondary mb-4">{qrDinaId}</p>
+            <button onClick={handleDownloadQR} className="w-full px-4 py-2.5 bg-status-purple text-white rounded-lg font-medium hover:bg-status-purple/80 transition-all">
+              다운로드
+            </button>
           </div>
         </div>
       )}

@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../services/api';
+import { useToastStore } from '../stores/toast.store';
 
 export default function UsersPage() {
   const [showModal, setShowModal] = useState(false);
@@ -9,12 +10,14 @@ export default function UsersPage() {
   const [isDragging, setIsDragging] = useState(false);
   const dragOffset = useRef({ x: 0, y: 0 });
   const queryClient = useQueryClient();
+  const toast = useToastStore();
 
   const { data: users, isLoading } = useQuery({ queryKey: ['users'], queryFn: () => api.get('/users').then((res) => res.data.data) });
 
   const createMutation = useMutation({
     mutationFn: (data: any) => api.post('/users', data),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['users'] }); setShowModal(false); setForm({ email: '', password: '', name: '', role: 'STUDIO_VIEWER' }); },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['users'] }); setShowModal(false); setForm({ email: '', password: '', name: '', role: 'STUDIO_VIEWER' }); toast.show('사용자가 생성되었습니다', 'success'); },
+    onError: (err: any) => { toast.show(err.response?.data?.message || '사용자 생성 실패', 'error'); },
   });
 
   const handleSubmit = (e: React.FormEvent) => { e.preventDefault(); createMutation.mutate(form); };

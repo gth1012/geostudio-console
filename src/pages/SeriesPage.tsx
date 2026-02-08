@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../services/api';
+import { useToastStore } from '../stores/toast.store';
 
 const MATERIAL_OPTIONS = [
   { value: 'paper_art', label: '종이 (아트지/스노우지)', carrier: 'PATTERN' },
@@ -11,26 +12,7 @@ const MATERIAL_OPTIONS = [
   { value: 'ceramic', label: '세라믹', carrier: 'ENGRAVING' },
 ] as const;
 
-const materialLabel = (v: string) => MATERIAL_OPTIONS.find(o => o.value === v)?.label || v;
 const materialCarrier = (v: string) => MATERIAL_OPTIONS.find(o => o.value === v)?.carrier || 'PATTERN';
-function Tooltip({ text, children }: { text: string; children: React.ReactNode }) {
-  const [show, setShow] = useState(false);
-  const [isTruncated, setIsTruncated] = useState(false);
-  const textRef = useRef<HTMLSpanElement>(null);
-  if (!text || text === '-') return <>{children}</>;
-  const checkTruncation = () => { if (textRef.current) setIsTruncated(textRef.current.scrollWidth > textRef.current.clientWidth); };
-  return (
-    <div className="relative inline-block w-full" onMouseEnter={() => { checkTruncation(); if (isTruncated || (textRef.current && textRef.current.scrollWidth > textRef.current.clientWidth)) setShow(true); }} onMouseLeave={() => setShow(false)}>
-      <span ref={textRef} className="block truncate">{text}</span>
-      {show && isTruncated && (
-        <div className="absolute z-50 left-1/2 transform -translate-x-1/2 bottom-full mb-2 px-3 py-2 bg-geo-deep text-txt-primary text-xs rounded-lg shadow-lg max-w-xs whitespace-normal text-center border border-geo-border">
-          {text}
-          <div className="absolute left-1/2 transform -translate-x-1/2 top-full border-4 border-transparent border-t-geo-deep"></div>
-        </div>
-      )}
-    </div>
-  );
-}
 
 function CarrierGuideText({ material }: { material: string }) {
   const carrier = materialCarrier(material);
@@ -45,7 +27,7 @@ function CarrierGuideText({ material }: { material: string }) {
 export default function SeriesPage() {
   const [showModal, setShowModal] = useState(false);
   const [showTrash, setShowTrash] = useState(false);
-  const [form, setForm] = useState({ name: '', code: '', description: '', artistName: '', material: 'paper_art', totalCount: '' });
+  const [form, setForm] = useState({ name: '', description: '', artistName: '', material: 'paper_art', totalCount: '' });
   const [modalPos, setModalPos] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const dragOffset = useRef({ x: 0, y: 0 });
@@ -53,16 +35,17 @@ export default function SeriesPage() {
   const [editForm, setEditForm] = useState({ name: '', code: '', description: '', artistName: '', material: 'paper_art' });
   const queryClient = useQueryClient();
 
+  const toast = useToastStore();
   const { data: series, isLoading } = useQuery({ queryKey: ['series'], queryFn: () => api.get('/series').then((res) => res.data.data), enabled: !showTrash });
   const { data: trashedSeries, isLoading: isTrashLoading } = useQuery({ queryKey: ['series-trash'], queryFn: () => api.get('/series/trash').then((res) => res.data.data), enabled: showTrash });
 
-  const createMutation = useMutation({ mutationFn: (data: any) => api.post('/series', { ...data, totalCount: data.totalCount ? parseInt(data.totalCount) : 0, insertionMethod: materialCarrier(data.material) }), onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['series'] }); setShowModal(false); setForm({ name: '', code: '', description: '', artistName: '', material: 'paper_art', totalCount: '' }); } });
-  const updateMutation = useMutation({ mutationFn: ({ id, data }: { id: string; data: any }) => api.patch(`/series/${id}`, { ...data, insertion_method: materialCarrier(data.material) }), onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['series'] }); setEditTarget(null); } });
-  const archiveMutation = useMutation({ mutationFn: (seriesId: string) => api.put(`/series/${seriesId}/archive`), onSuccess: () => queryClient.invalidateQueries({ queryKey: ['series'] }) });
-  const activateMutation = useMutation({ mutationFn: (seriesId: string) => api.put(`/series/${seriesId}/activate`), onSuccess: () => queryClient.invalidateQueries({ queryKey: ['series'] }) });
-  const deleteMutation = useMutation({ mutationFn: (seriesId: string) => api.delete(`/series/${seriesId}`), onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['series'] }); queryClient.invalidateQueries({ queryKey: ['series-trash'] }); } });
-  const restoreMutation = useMutation({ mutationFn: (seriesId: string) => api.put(`/series/${seriesId}/restore`), onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['series'] }); queryClient.invalidateQueries({ queryKey: ['series-trash'] }); } });
-  const permanentDeleteMutation = useMutation({ mutationFn: (seriesId: string) => api.delete(`/series/${seriesId}/permanent`), onSuccess: () => queryClient.invalidateQueries({ queryKey: ['series-trash'] }) });
+  const createMutation = useMutation({ mutationFn: (data: any) => api.post('/series', { ...data, totalCount: data.totalCount ? parseInt(data.totalCount) : 0, insertionMethod: materialCarrier(data.material) }), onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['series'] }); setShowModal(false); setForm({ name: '', description: '', artistName: '', material: 'paper_art', totalCount: '' }); toast.show('시리즈가 생성되었습니다', 'success'); }, onError: (err: any) => { toast.show(err.response?.data?.message || '시리즈 생성 실패', 'error'); } });
+  const updateMutation = useMutation({ mutationFn: ({ id, data }: { id: string; data: any }) => api.patch(`/series/${id}`, { ...data, insertion_method: materialCarrier(data.material) }), onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['series'] }); setEditTarget(null); toast.show('시리즈가 수정되었습니다', 'success'); }, onError: (err: any) => { toast.show(err.response?.data?.message || '시리즈 수정 실패', 'error'); } });
+  const archiveMutation = useMutation({ mutationFn: (seriesId: string) => api.put(`/series/${seriesId}/archive`), onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['series'] }); toast.show('시리즈가 비활성화되었습니다', 'success'); }, onError: (err: any) => { toast.show(err.response?.data?.message || '비활성화 실패', 'error'); } });
+  const activateMutation = useMutation({ mutationFn: (seriesId: string) => api.put(`/series/${seriesId}/activate`), onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['series'] }); toast.show('시리즈가 활성화되었습니다', 'success'); }, onError: (err: any) => { toast.show(err.response?.data?.message || '활성화 실패', 'error'); } });
+  const deleteMutation = useMutation({ mutationFn: (seriesId: string) => api.delete(`/series/${seriesId}`), onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['series'] }); queryClient.invalidateQueries({ queryKey: ['series-trash'] }); toast.show('시리즈가 휴지통으로 이동되었습니다', 'success'); }, onError: (err: any) => { toast.show(err.response?.data?.message || '삭제 실패', 'error'); } });
+  const restoreMutation = useMutation({ mutationFn: (seriesId: string) => api.put(`/series/${seriesId}/restore`), onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['series'] }); queryClient.invalidateQueries({ queryKey: ['series-trash'] }); toast.show('시리즈가 복원되었습니다', 'success'); }, onError: (err: any) => { toast.show(err.response?.data?.message || '복원 실패', 'error'); } });
+  const permanentDeleteMutation = useMutation({ mutationFn: (seriesId: string) => api.delete(`/series/${seriesId}/permanent`), onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['series-trash'] }); toast.show('시리즈가 영구 삭제되었습니다', 'success'); }, onError: (err: any) => { toast.show(err.response?.data?.message || '영구 삭제 실패', 'error'); } });
 
   const handleSubmit = (e: React.FormEvent) => { e.preventDefault(); if (createMutation.isPending) return; createMutation.mutate(form); };
   const handleDeactivate = (id: string, name: string) => { if (confirm(`"${name}" 시리즈를 비활성화 하시겠습니까?`)) archiveMutation.mutate(id); };
@@ -99,41 +82,29 @@ export default function SeriesPage() {
           <table className="w-full table-fixed">
             <thead>
               <tr className="border-b border-geo-border">
-                <th className="w-24 px-3 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">ID</th>
-                <th className="w-28 px-3 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">이름</th>
-                <th className="w-24 px-3 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">코드</th>
-                <th className="w-24 px-3 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">아티스트</th>
-                <th className="w-28 px-3 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">설명</th>
-                <th className="w-16 px-3 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">재질</th>
-                <th className="w-20 px-3 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">총발행량</th>
-                <th className="w-20 px-3 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">진행률</th>
-                <th className="w-20 px-3 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">{showTrash ? '삭제일' : '상태'}</th>
-                <th className="w-24 px-3 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">{showTrash ? '' : '생성일'}</th>
-                <th className="w-28 px-3 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">작업</th>
+                <th className="w-[12%] px-4 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">ID</th>
+                <th className="w-[30%] px-4 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">이름</th>
+                <th className="w-[12%] px-4 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">{showTrash ? '삭제일' : '상태'}</th>
+                <th className="w-[12%] px-4 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">수량</th>
+                <th className="w-[14%] px-4 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">{showTrash ? '' : '생성일'}</th>
+                <th className="w-[20%] px-4 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">작업</th>
               </tr>
             </thead>
             <tbody>
               {displayData?.length === 0 ? (
-                <tr><td colSpan={11} className="px-6 py-8 text-center text-txt-muted">{showTrash ? '휴지통이 비어있습니다.' : '시리즈가 없습니다.'}</td></tr>
+                <tr><td colSpan={6} className="px-6 py-8 text-center text-txt-muted">{showTrash ? '휴지통이 비어있습니다.' : '시리즈가 없습니다.'}</td></tr>
               ) : (
                 displayData?.map((s: any) => (
                   <tr key={s.series_id} className="border-b border-geo-border/50 last:border-0 dark-table-row transition-colors">
-                    <td className="px-3 py-3 text-center font-mono text-sm text-status-blue truncate">{s.display_id || '-'}</td>
-                    <td className="px-3 py-3 text-center text-txt-primary overflow-visible"><Tooltip text={s.name}><span className="block truncate">{s.name}</span></Tooltip></td>
-                    <td className="px-3 py-3 text-center text-txt-secondary overflow-visible"><Tooltip text={s.code || ''}><span className="block truncate">{s.code || '-'}</span></Tooltip></td>
-                    <td className="px-3 py-3 text-center text-txt-secondary overflow-visible"><Tooltip text={s.artist_name || ''}><span className="block truncate">{s.artist_name || '-'}</span></Tooltip></td>
-                    <td className="px-3 py-3 text-center text-txt-muted overflow-visible"><Tooltip text={s.description || ''}><span className="block truncate">{s.description || '-'}</span></Tooltip></td>
-                    <td className="px-3 py-3 text-center text-txt-secondary text-xs">{materialLabel(s.material || 'paper_art')}</td>
-                    <td className="px-3 py-3 text-center text-txt-primary font-mono text-sm">{s.total_count > 0 ? s.total_count.toLocaleString() : '-'}</td>
-                    <td className="px-3 py-3 text-center text-sm">{s.total_count > 0 ? (
-                      <span className="font-mono text-status-blue">{Math.round(((s.next_edition - 1) / s.total_count) * 100)}%</span>
-                    ) : <span className="text-txt-muted">-</span>}</td>
-                    <td className="px-3 py-3 text-center">
+                    <td className="px-4 py-3 text-center font-mono text-sm text-status-blue">{s.display_id || '-'}</td>
+                    <td className="px-4 py-3 text-center text-txt-primary truncate">{s.name}</td>
+                    <td className="px-4 py-3 text-center">
                       {showTrash ? <span className="text-txt-muted text-xs">{new Date(s.deleted_at).toLocaleDateString()}</span> : (
-                        <span className={`inline-block w-16 px-1 py-1 rounded text-xs font-medium text-center ${s.status === 'ACTIVE' ? 'bg-status-green-dim text-status-green' : 'bg-status-yellow-dim text-status-yellow'}`}>{s.status === 'ACTIVE' ? 'Active' : 'Inactive'}</span>
+                        <span className={`inline-block w-14 px-1 py-1 rounded text-xs font-medium text-center ${s.status === 'ACTIVE' ? 'bg-status-green-dim text-status-green' : 'bg-status-yellow-dim text-status-yellow'}`}>{s.status === 'ACTIVE' ? '활성' : '비활성'}</span>
                       )}
                     </td>
-                    <td className="px-3 py-3 text-center text-txt-muted text-xs">{!showTrash && new Date(s.created_at).toLocaleDateString()}</td>
+                    <td className="px-4 py-3 text-center text-txt-primary font-mono text-sm">{s.total_count > 0 ? s.total_count.toLocaleString() : '-'}</td>
+                    <td className="px-4 py-3 text-center text-txt-muted text-xs">{!showTrash && new Date(s.created_at).toLocaleDateString()}</td>
                     <td className="px-3 py-3 text-center">
                       <div className="flex justify-center gap-1">
                         {showTrash ? (
@@ -226,10 +197,6 @@ export default function SeriesPage() {
                 <div>
                   <label className="block text-xs text-txt-secondary mb-1.5">시리즈 이름 *</label>
                   <input placeholder="시리즈 이름 입력" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="w-full px-4 py-2.5 bg-geo-main border border-geo-border rounded-lg text-txt-primary placeholder-txt-muted focus:ring-2 focus:ring-status-purple/40 focus:border-status-purple/60 outline-none transition-all" required />
-                </div>
-                <div>
-                  <label className="block text-xs text-txt-secondary mb-1.5">시리즈 코드 *</label>
-                  <input placeholder="시리즈 코드 입력" value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} className="w-full px-4 py-2.5 bg-geo-main border border-geo-border rounded-lg text-txt-primary placeholder-txt-muted focus:ring-2 focus:ring-status-purple/40 focus:border-status-purple/60 outline-none transition-all" required />
                 </div>
                 <div>
                   <label className="block text-xs text-txt-secondary mb-1.5">아티스트</label>
