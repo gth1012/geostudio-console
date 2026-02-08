@@ -19,13 +19,13 @@ const menuItems = [
   {
     section: '관리',
     items: [
-      { path: '/assets', label: '자산 관리', icon: (
+      { path: '/assets', label: '에셋 관리', icon: (
         <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg>
       )},
       { path: '/exports', label: '데이터 출고', icon: (
         <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>
       )},
-      { path: '/users', label: '사용자', icon: (
+      { path: '/users', label: '사용자 관리', icon: (
         <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
       )},
     ],
@@ -33,7 +33,7 @@ const menuItems = [
   {
     section: '시스템',
     items: [
-      { path: '/audit', label: '감사로그', icon: (
+      { path: '/audit', label: '로그 조회', icon: (
         <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
       )},
       { path: '/system-admin', label: '시스템 관리', icon: (

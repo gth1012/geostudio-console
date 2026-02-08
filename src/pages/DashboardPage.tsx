@@ -17,12 +17,24 @@ export default function DashboardPage() {
   const completed = batches?.filter((b: any) => b.status === 'COMPLETED').length || 0;
   const drafts = batches?.filter((b: any) => b.status === 'DRAFT').length || 0;
 
+  const getStatusLabel = (status: string) => {
+    const map: Record<string, string> = {
+      DRAFT: '임시 저장',
+      IN_PROGRESS: '처리 중',
+      COMPLETED: '완료',
+      SHIPPED: '출고 완료',
+      FAILED: '실패',
+      LOCKED: '잠금',
+    };
+    return map[status] || status;
+  };
+
   return (
     <div className="animate-fade-in">
       {/* Hero KPI */}
       <div className="bg-geo-card border border-geo-border rounded-[14px] p-7 mb-4 relative overflow-hidden hover:border-geo-border-hover hover:bg-geo-card-hover transition-all">
         <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-status-green to-status-blue" />
-        <div className="text-[13px] text-txt-secondary font-medium tracking-wide uppercase mb-2.5">총 발행 자산 (에셋)</div>
+        <div className="text-[13px] text-txt-secondary font-medium tracking-wide uppercase mb-2.5">총 발행 에셋</div>
         <div className="flex items-end justify-between">
           <div className="flex items-end gap-4">
             <span className="text-[56px] font-bold tracking-tighter font-mono text-status-green leading-none">
@@ -33,11 +45,11 @@ export default function DashboardPage() {
           <div className="flex gap-7 mb-1.5">
             <div className="flex flex-col items-end">
               <span className="text-[22px] font-semibold font-mono text-status-purple">{series?.length || 0}</span>
-              <span className="text-[11px] text-txt-muted mt-0.5">시리즈</span>
+              <span className="text-[11px] text-txt-muted mt-0.5">활성 시리즈</span>
             </div>
             <div className="flex flex-col items-end">
               <span className="text-[22px] font-semibold font-mono text-status-purple">{batches?.length || 0}</span>
-              <span className="text-[11px] text-txt-muted mt-0.5">총 작업</span>
+              <span className="text-[11px] text-txt-muted mt-0.5">누적 작업 수</span>
             </div>
             <div className="flex flex-col items-end">
               <span className="text-[22px] font-semibold font-mono text-status-purple">28</span>
@@ -49,9 +61,9 @@ export default function DashboardPage() {
 
       {/* Sub Stats */}
       <div className="grid grid-cols-3 gap-4 mb-7">
-        <StatCard color="blue" label="시리즈" value={series?.length || 0} sub={series?.[0]?.name || '-'} />
-        <StatCard color="yellow" label="진행중 작업" value={inProgress + drafts} sub={`DRAFT ${drafts} · IN_PROGRESS ${inProgress}`} />
-        <StatCard color="green" label="완료 작업" value={completed} sub={`총 ${batches?.length || 0}건 중`} />
+        <StatCard color="blue" label="활성 시리즈" value={series?.length || 0} sub={series?.[0]?.name || '-'} />
+        <StatCard color="yellow" label="진행 중인 작업" value={inProgress + drafts} sub={`임시 저장 ${drafts} · 처리 중 ${inProgress}`} />
+        <StatCard color="green" label="완료된 작업" value={completed} sub={`총 ${batches?.length || 0}건 중`} />
       </div>
 
       {/* Two Column */}
@@ -59,7 +71,7 @@ export default function DashboardPage() {
         {/* Recent Series */}
         <div className="bg-geo-card border border-geo-border rounded-xl overflow-hidden hover:border-geo-border-hover transition-colors">
           <div className="px-5 py-3.5 flex items-center justify-between border-b border-geo-border">
-            <span className="text-sm font-semibold text-txt-primary">최근 시리즈</span>
+            <span className="text-sm font-semibold text-txt-primary">최근 생성 시리즈</span>
             <span className="text-[11px] px-2 py-0.5 rounded-md font-medium font-mono bg-status-blue-dim text-status-blue">
               {series?.length || 0}건
             </span>
@@ -92,7 +104,7 @@ export default function DashboardPage() {
         {/* Recent Batches */}
         <div className="bg-geo-card border border-geo-border rounded-xl overflow-hidden hover:border-geo-border-hover transition-colors">
           <div className="px-5 py-3.5 flex items-center justify-between border-b border-geo-border">
-            <span className="text-sm font-semibold text-txt-primary">최근 작업</span>
+            <span className="text-sm font-semibold text-txt-primary">최근 작업 내역</span>
             <span className="text-[11px] px-2 py-0.5 rounded-md font-medium font-mono bg-status-yellow-dim text-status-yellow">
               {batches?.length || 0}건
             </span>
@@ -101,7 +113,7 @@ export default function DashboardPage() {
             <div key={b.batch_id} className="px-5 py-3.5 flex items-center justify-between border-b border-geo-border/50 last:border-0 hover:bg-geo-card-hover transition-colors cursor-pointer">
               <div className="flex items-center gap-3">
                 <div className={`w-[34px] h-[34px] rounded-lg flex items-center justify-center text-[15px] ${
-                  b.status === 'COMPLETED' ? 'bg-status-green-dim text-status-green' :
+                  b.status === 'COMPLETED' || b.status === 'SHIPPED' ? 'bg-status-green-dim text-status-green' :
                   b.status === 'FAILED' ? 'bg-status-red-dim text-status-red' :
                   'bg-status-yellow-dim text-status-yellow'
                 }`}>⚙️</div>
@@ -113,12 +125,12 @@ export default function DashboardPage() {
                 </div>
               </div>
               <span className={`text-[11px] px-2 py-0.5 rounded-md font-medium font-mono ${
-                b.status === 'COMPLETED' ? 'bg-status-green-dim text-status-green' :
+                b.status === 'COMPLETED' || b.status === 'SHIPPED' ? 'bg-status-green-dim text-status-green' :
                 b.status === 'IN_PROGRESS' ? 'bg-status-yellow-dim text-status-yellow' :
                 b.status === 'FAILED' ? 'bg-status-red-dim text-status-red' :
                 'bg-status-yellow-dim text-status-yellow'
               }`}>
-                {b.status}
+                {getStatusLabel(b.status)}
               </span>
             </div>
           ))}
