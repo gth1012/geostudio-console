@@ -30,10 +30,10 @@ export default {
         },
         txt: {
           primary: '#F0EFF4',
-          secondary: '#9B99AE',
-          muted: '#5C5A72',
+          secondary: '#A8A6BC',
+          muted: '#8B89A0',
           bright: '#E0DEE8',
-          faint: '#4A485C',
+          faint: '#6B697E',
         },
       },
       fontFamily: {
