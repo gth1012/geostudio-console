@@ -11,7 +11,7 @@ export default function AssetsPage() {
   const [modalPos, setModalPos] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const [qrDinaId, setQrDinaId] = useState<string | null>(null);
+  const [selectedAsset, setSelectedAsset] = useState<any>(null);
   const dragOffset = useRef({ x: 0, y: 0 });
   const queryClient = useQueryClient();
   const toast = useToastStore();
@@ -71,7 +71,7 @@ export default function AssetsPage() {
   };
 
   const handleDownloadQR = () => {
-    if (!qrDinaId) return;
+    if (!selectedAsset) return;
     const svg = document.getElementById('qr-code-svg');
     if (!svg) return;
     const svgData = new XMLSerializer().serializeToString(svg);
@@ -83,7 +83,7 @@ export default function AssetsPage() {
       canvas.height = img.height;
       ctx?.drawImage(img, 0, 0);
       const a = document.createElement('a');
-      a.download = `${qrDinaId}.png`;
+      a.download = `${selectedAsset.dina_id}.png`;
       a.href = canvas.toDataURL('image/png');
       a.click();
     };
@@ -91,71 +91,118 @@ export default function AssetsPage() {
   };
 
   return (
-    <div className="animate-fade-in">
-      <div className="flex justify-between items-center mb-6">
-        <div className="flex gap-3 items-center">
-          <select value={filters.batchId} onChange={(e) => handleFilterChange({ ...filters, batchId: e.target.value })} className="px-4 py-2 bg-geo-card border border-geo-border rounded-lg text-txt-secondary text-sm focus:ring-2 focus:ring-status-purple/40 outline-none">
-            <option value="">전체 배치</option>
-            {batches?.map((b: any) => <option key={b.batch_id} value={b.batch_id}>{b.name || `Batch ${b.batch_number}`}</option>)}
-          </select>
-          <select value={filters.status} onChange={(e) => handleFilterChange({ ...filters, status: e.target.value })} className="px-4 py-2 bg-geo-card border border-geo-border rounded-lg text-txt-secondary text-sm focus:ring-2 focus:ring-status-purple/40 outline-none">
-            <option value="">전체 상태</option>
-            <option value="CREATED">생성됨</option>
-            <option value="DINA_INSERTED">DINA삽입</option>
-            <option value="QR_GENERATED">QR생성</option>
-            <option value="EXPORTED">출고됨</option>
-            <option value="ISSUED">발급완료</option>
-          </select>
-          <span className="text-sm text-txt-muted">총 {totalCount.toLocaleString()}개</span>
+    <div className="animate-fade-in flex">
+      {/* 메인 컨텐츠 */}
+      <div className={`flex-1 transition-all duration-300 ${selectedAsset ? 'mr-80' : ''}`}>
+        <div className="flex justify-between items-center mb-6">
+          <div className="flex gap-3 items-center">
+            <select value={filters.batchId} onChange={(e) => handleFilterChange({ ...filters, batchId: e.target.value })} className="px-4 py-2 bg-geo-card border border-geo-border rounded-lg text-txt-secondary text-sm focus:ring-2 focus:ring-status-purple/40 outline-none">
+              <option value="">전체 배치</option>
+              {batches?.map((b: any) => <option key={b.batch_id} value={b.batch_id}>{b.name || `Batch ${b.batch_number}`}</option>)}
+            </select>
+            <select value={filters.status} onChange={(e) => handleFilterChange({ ...filters, status: e.target.value })} className="px-4 py-2 bg-geo-card border border-geo-border rounded-lg text-txt-secondary text-sm focus:ring-2 focus:ring-status-purple/40 outline-none">
+              <option value="">전체 상태</option>
+              <option value="CREATED">생성됨</option>
+              <option value="DINA_INSERTED">DINA삽입</option>
+              <option value="QR_GENERATED">QR생성</option>
+              <option value="EXPORTED">출고됨</option>
+              <option value="ISSUED">발급완료</option>
+            </select>
+            <span className="text-sm text-txt-muted">총 {totalCount.toLocaleString()}개</span>
+          </div>
+          <button onClick={() => { setModalPos({ x: 0, y: 0 }); setShowModal(true); }} className="px-4 py-2 bg-status-purple text-white rounded-lg hover:bg-status-purple/80 text-sm font-medium transition-all">+ 대량 생성</button>
         </div>
-        <button onClick={() => { setModalPos({ x: 0, y: 0 }); setShowModal(true); }} className="px-4 py-2 bg-status-purple text-white rounded-lg hover:bg-status-purple/80 text-sm font-medium transition-all">+ 대량 생성</button>
+
+        {isLoading ? <p className="text-txt-secondary">로딩 중...</p> : (
+          <>
+            <div className="bg-geo-card border border-geo-border rounded-xl overflow-hidden">
+              <table className="w-full">
+                <thead><tr className="border-b border-geo-border">
+                  <th className="px-6 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">에디션</th>
+                  <th className="px-6 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">DINA</th>
+                  <th className="px-6 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">OTP</th>
+                  <th className="px-6 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">시리즈 ID</th>
+                  <th className="px-6 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">상태</th>
+                </tr></thead>
+                <tbody>
+                  {assets.map((a: any) => (
+                    <tr key={a.asset_id} className={`border-b border-geo-border/50 last:border-0 transition-colors cursor-pointer ${selectedAsset?.asset_id === a.asset_id ? 'bg-status-purple/10' : 'dark-table-row'}`} onClick={() => setSelectedAsset(a)}>
+                      <td className="px-6 py-4 text-center font-mono text-sm text-txt-primary">{a.edition ? String(a.edition).padStart(5, '0') : '-'}</td>
+                      <td className="px-6 py-4 text-center font-mono text-sm text-status-blue hover:underline">{a.dina_id}</td>
+                      <td className="px-6 py-4 text-center font-mono text-sm text-txt-secondary">{a.otp_code || '-'}</td>
+                      <td className="px-6 py-4 text-center font-mono text-sm text-txt-secondary">{a.series_display_id || '-'}</td>
+                      <td className="px-6 py-4 text-center"><span className={`px-2 py-1 rounded text-xs font-medium ${getStatusBadge(a.status)}`}>{getStatusLabel(a.status)}</span></td>
+                    </tr>
+                  ))}
+                  {!assets.length && <tr><td colSpan={5} className="px-6 py-8 text-center text-txt-muted">자산이 없습니다</td></tr>}
+                </tbody>
+              </table>
+            </div>
+
+            {/* 페이지네이션 */}
+            {totalPages > 1 && (
+              <div className="flex justify-center items-center gap-1 mt-6">
+                <button onClick={() => setCurrentPage(1)} disabled={currentPage === 1}
+                  className="px-2 py-1 text-sm text-txt-secondary hover:text-txt-primary disabled:opacity-30 disabled:cursor-not-allowed">&lt;&lt;</button>
+                <button onClick={() => setCurrentPage(Math.max(1, startPage - 10))} disabled={startPage === 1}
+                  className="px-2 py-1 text-sm text-txt-secondary hover:text-txt-primary disabled:opacity-30 disabled:cursor-not-allowed">&lt;</button>
+                {Array.from({ length: endPage - startPage + 1 }, (_, i) => startPage + i).map((page) => (
+                  <button key={page} onClick={() => setCurrentPage(page)}
+                    className={`w-8 h-8 text-sm rounded ${page === currentPage ? 'bg-status-purple text-white' : 'text-txt-secondary hover:text-txt-primary hover:bg-geo-card-hover'}`}>{page}</button>
+                ))}
+                <button onClick={() => setCurrentPage(Math.min(totalPages, startPage + 10))} disabled={endPage >= totalPages}
+                  className="px-2 py-1 text-sm text-txt-secondary hover:text-txt-primary disabled:opacity-30 disabled:cursor-not-allowed">&gt;</button>
+                <button onClick={() => setCurrentPage(totalPages)} disabled={currentPage === totalPages}
+                  className="px-2 py-1 text-sm text-txt-secondary hover:text-txt-primary disabled:opacity-30 disabled:cursor-not-allowed">&gt;&gt;</button>
+                <span className="ml-4 text-sm text-txt-muted">{currentPage} / {totalPages} 페이지</span>
+              </div>
+            )}
+          </>
+        )}
       </div>
 
-      {isLoading ? <p className="text-txt-secondary">로딩 중...</p> : (
-        <>
-          <div className="bg-geo-card border border-geo-border rounded-xl overflow-hidden">
-            <table className="w-full">
-              <thead><tr className="border-b border-geo-border">
-                <th className="px-6 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">에디션</th>
-                <th className="px-6 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">DINA</th>
-                <th className="px-6 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">OTP</th>
-                <th className="px-6 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">시리즈 ID</th>
-                <th className="px-6 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">상태</th>
-              </tr></thead>
-              <tbody>
-                {assets.map((a: any) => (
-                  <tr key={a.asset_id} className="border-b border-geo-border/50 last:border-0 dark-table-row transition-colors">
-                    <td className="px-6 py-4 text-center font-mono text-sm text-txt-primary">{a.edition ? String(a.edition).padStart(5, '0') : '-'}</td>
-                    <td className="px-6 py-4 text-center font-mono text-sm text-status-blue cursor-pointer hover:underline" onClick={() => setQrDinaId(a.dina_id)}>{a.dina_id}</td>
-                    <td className="px-6 py-4 text-center font-mono text-sm text-txt-secondary">{a.otp_code}</td>
-                    <td className="px-6 py-4 text-center font-mono text-sm text-txt-secondary">{a.series_display_id || '-'}</td>
-                    <td className="px-6 py-4 text-center"><span className={`px-2 py-1 rounded text-xs font-medium ${getStatusBadge(a.status)}`}>{getStatusLabel(a.status)}</span></td>
-                  </tr>
-                ))}
-                {!assets.length && <tr><td colSpan={5} className="px-6 py-8 text-center text-txt-muted">자산이 없습니다</td></tr>}
-              </tbody>
-            </table>
+      {/* QR 사이드 패널 */}
+      {selectedAsset && (
+        <div className="fixed right-0 top-0 h-full w-80 bg-geo-card border-l border-geo-border shadow-2xl z-40 flex flex-col animate-fade-in">
+          <div className="px-6 py-4 border-b border-geo-border flex items-center justify-between">
+            <h3 className="text-base font-semibold text-txt-primary">자산 정보</h3>
+            <button onClick={() => setSelectedAsset(null)} className="w-8 h-8 flex items-center justify-center rounded-lg text-txt-muted hover:text-txt-primary hover:bg-geo-card-hover transition-all">
+              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12" /></svg>
+            </button>
           </div>
-
-          {/* 페이지네이션 */}
-          {totalPages > 1 && (
-            <div className="flex justify-center items-center gap-1 mt-6">
-              <button onClick={() => setCurrentPage(1)} disabled={currentPage === 1}
-                className="px-2 py-1 text-sm text-txt-secondary hover:text-txt-primary disabled:opacity-30 disabled:cursor-not-allowed">&lt;&lt;</button>
-              <button onClick={() => setCurrentPage(Math.max(1, startPage - 10))} disabled={startPage === 1}
-                className="px-2 py-1 text-sm text-txt-secondary hover:text-txt-primary disabled:opacity-30 disabled:cursor-not-allowed">&lt;</button>
-              {Array.from({ length: endPage - startPage + 1 }, (_, i) => startPage + i).map((page) => (
-                <button key={page} onClick={() => setCurrentPage(page)}
-                  className={`w-8 h-8 text-sm rounded ${page === currentPage ? 'bg-status-purple text-white' : 'text-txt-secondary hover:text-txt-primary hover:bg-geo-card-hover'}`}>{page}</button>
-              ))}
-              <button onClick={() => setCurrentPage(Math.min(totalPages, startPage + 10))} disabled={endPage >= totalPages}
-                className="px-2 py-1 text-sm text-txt-secondary hover:text-txt-primary disabled:opacity-30 disabled:cursor-not-allowed">&gt;</button>
-              <button onClick={() => setCurrentPage(totalPages)} disabled={currentPage === totalPages}
-                className="px-2 py-1 text-sm text-txt-secondary hover:text-txt-primary disabled:opacity-30 disabled:cursor-not-allowed">&gt;&gt;</button>
-              <span className="ml-4 text-sm text-txt-muted">{currentPage} / {totalPages} 페이지</span>
+          <div className="flex-1 overflow-y-auto p-6">
+            <div className="bg-white p-4 rounded-xl flex justify-center mb-6">
+              <QRCodeSVG id="qr-code-svg" value={selectedAsset.dina_id} size={200} level="H" />
             </div>
-          )}
-        </>
+            <div className="space-y-4">
+              <div>
+                <p className="text-xs text-txt-muted uppercase tracking-wider mb-1">DINA ID</p>
+                <p className="font-mono text-status-blue font-medium">{selectedAsset.dina_id}</p>
+              </div>
+              <div>
+                <p className="text-xs text-txt-muted uppercase tracking-wider mb-1">OTP 코드</p>
+                <p className="font-mono text-txt-primary font-medium">{selectedAsset.otp_code || '-'}</p>
+              </div>
+              <div>
+                <p className="text-xs text-txt-muted uppercase tracking-wider mb-1">에디션</p>
+                <p className="font-mono text-txt-primary">{selectedAsset.edition ? `#${String(selectedAsset.edition).padStart(5, '0')}` : '-'}</p>
+              </div>
+              <div>
+                <p className="text-xs text-txt-muted uppercase tracking-wider mb-1">시리즈 ID</p>
+                <p className="font-mono text-txt-primary">{selectedAsset.series_display_id || '-'}</p>
+              </div>
+              <div>
+                <p className="text-xs text-txt-muted uppercase tracking-wider mb-1">상태</p>
+                <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${getStatusBadge(selectedAsset.status)}`}>{getStatusLabel(selectedAsset.status)}</span>
+              </div>
+            </div>
+          </div>
+          <div className="p-6 border-t border-geo-border">
+            <button onClick={handleDownloadQR} className="w-full px-4 py-2.5 bg-status-purple text-white rounded-lg font-medium hover:bg-status-purple/80 transition-all">
+              QR 다운로드
+            </button>
+          </div>
+        </div>
       )}
 
       {showModal && (
@@ -183,27 +230,6 @@ export default function AssetsPage() {
                 <button type="submit" className="flex-1 px-4 py-2.5 bg-status-purple text-white rounded-lg font-medium hover:bg-status-purple/80 transition-all">생성</button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
-
-      {/* QR 코드 모달 */}
-      {qrDinaId && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center" onClick={() => setQrDinaId(null)}>
-          <div className="bg-geo-card border border-geo-border rounded-xl w-full max-w-xs p-6" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-base font-semibold text-txt-primary">QR 코드</h3>
-              <button onClick={() => setQrDinaId(null)} className="w-7 h-7 flex items-center justify-center rounded-lg text-txt-muted hover:text-txt-primary hover:bg-geo-card-hover transition-all">
-                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12" /></svg>
-              </button>
-            </div>
-            <div className="bg-white p-4 rounded-lg flex justify-center mb-4">
-              <QRCodeSVG id="qr-code-svg" value={qrDinaId} size={180} level="H" />
-            </div>
-            <p className="text-center font-mono text-sm text-txt-secondary mb-4">{qrDinaId}</p>
-            <button onClick={handleDownloadQR} className="w-full px-4 py-2.5 bg-status-purple text-white rounded-lg font-medium hover:bg-status-purple/80 transition-all">
-              다운로드
-            </button>
           </div>
         </div>
       )}
