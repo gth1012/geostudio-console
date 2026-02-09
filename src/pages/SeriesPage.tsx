@@ -27,7 +27,8 @@ function CarrierGuideText({ material }: { material: string }) {
 export default function SeriesPage() {
   const [showModal, setShowModal] = useState(false);
   const [showTrash, setShowTrash] = useState(false);
-  const [form, setForm] = useState({ name: '', description: '', artistName: '', material: 'paper_art', totalCount: '' });
+  const [form, setForm] = useState({ name: '', description: '', artistName: '', material: 'paper_art', thumbnailImage: '' });
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [modalPos, setModalPos] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const dragOffset = useRef({ x: 0, y: 0 });
@@ -39,7 +40,7 @@ export default function SeriesPage() {
   const { data: series, isLoading } = useQuery({ queryKey: ['series'], queryFn: () => api.get('/series').then((res) => res.data.data), enabled: !showTrash });
   const { data: trashedSeries, isLoading: isTrashLoading } = useQuery({ queryKey: ['series-trash'], queryFn: () => api.get('/series/trash').then((res) => res.data.data), enabled: showTrash });
 
-  const createMutation = useMutation({ mutationFn: (data: any) => api.post('/series', { ...data, totalCount: data.totalCount ? parseInt(data.totalCount) : 0, insertionMethod: materialCarrier(data.material) }), onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['series'] }); setShowModal(false); setForm({ name: '', description: '', artistName: '', material: 'paper_art', totalCount: '' }); toast.show('시리즈가 생성되었습니다', 'success'); }, onError: (err: any) => { toast.show(err.response?.data?.message || '시리즈 생성 실패', 'error'); } });
+  const createMutation = useMutation({ mutationFn: (data: any) => api.post('/series', { ...data, thumbnail_image: data.thumbnailImage || null, insertionMethod: materialCarrier(data.material) }), onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['series'] }); setShowModal(false); setForm({ name: '', description: '', artistName: '', material: 'paper_art', thumbnailImage: '' }); if (fileInputRef.current) fileInputRef.current.value = ''; toast.show('시리즈가 생성되었습니다', 'success'); }, onError: (err: any) => { toast.show(err.response?.data?.message || '시리즈 생성 실패', 'error'); } });
   const updateMutation = useMutation({ mutationFn: ({ id, data }: { id: string; data: any }) => api.patch(`/series/${id}`, { ...data, insertion_method: materialCarrier(data.material) }), onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['series'] }); setEditTarget(null); toast.show('시리즈가 수정되었습니다', 'success'); }, onError: (err: any) => { toast.show(err.response?.data?.message || '시리즈 수정 실패', 'error'); } });
   const archiveMutation = useMutation({ mutationFn: (seriesId: string) => api.put(`/series/${seriesId}/archive`), onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['series'] }); toast.show('시리즈가 비활성화되었습니다', 'success'); }, onError: (err: any) => { toast.show(err.response?.data?.message || '비활성화 실패', 'error'); } });
   const activateMutation = useMutation({ mutationFn: (seriesId: string) => api.put(`/series/${seriesId}/activate`), onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['series'] }); toast.show('시리즈가 활성화되었습니다', 'success'); }, onError: (err: any) => { toast.show(err.response?.data?.message || '활성화 실패', 'error'); } });
@@ -48,6 +49,13 @@ export default function SeriesPage() {
   const permanentDeleteMutation = useMutation({ mutationFn: (seriesId: string) => api.delete(`/series/${seriesId}/permanent`), onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['series-trash'] }); toast.show('시리즈가 영구 삭제되었습니다', 'success'); }, onError: (err: any) => { toast.show(err.response?.data?.message || '영구 삭제 실패', 'error'); } });
 
   const handleSubmit = (e: React.FormEvent) => { e.preventDefault(); if (createMutation.isPending) return; createMutation.mutate(form); };
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => { setForm({ ...form, thumbnailImage: reader.result as string }); };
+    reader.readAsDataURL(file);
+  };
   const handleDeactivate = (id: string, name: string) => { if (confirm(`"${name}" 시리즈를 비활성화 하시겠습니까?`)) archiveMutation.mutate(id); };
   const handleActivate = (id: string, name: string) => { if (confirm(`"${name}" 시리즈를 활성화 하시겠습니까?`)) activateMutation.mutate(id); };
   const handleDelete = (id: string, name: string) => { if (confirm(`"${name}" 시리즈를 휴지통으로 이동하시겠습니까?`)) deleteMutation.mutate(id); };
@@ -210,8 +218,9 @@ export default function SeriesPage() {
                   <CarrierGuideText material={form.material} />
                 </div>
                 <div>
-                  <label className="block text-xs text-txt-secondary mb-1.5">총 발행량 *</label>
-                  <input type="number" placeholder="예: 100000" value={form.totalCount} onChange={(e) => setForm({ ...form, totalCount: e.target.value })} className="w-full px-4 py-2.5 bg-geo-main border border-geo-border rounded-lg text-txt-primary placeholder-txt-muted focus:ring-2 focus:ring-status-purple/40 focus:border-status-purple/60 outline-none transition-all" required min="1" />
+                  <label className="block text-xs text-txt-secondary mb-1.5">대표 이미지</label>
+                  <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileChange} className="w-full px-4 py-2.5 bg-geo-main border border-geo-border rounded-lg text-txt-primary file:mr-3 file:py-1 file:px-3 file:rounded file:border-0 file:text-xs file:bg-status-purple/20 file:text-status-purple cursor-pointer" />
+                  {form.thumbnailImage && <img src={form.thumbnailImage} alt="preview" className="mt-2 w-20 h-20 object-cover rounded-lg border border-geo-border" />}
                 </div>
                 <div>
                   <label className="block text-xs text-txt-secondary mb-1.5">설명</label>

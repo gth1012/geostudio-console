@@ -6,7 +6,8 @@ import { useToastStore } from '../stores/toast.store';
 
 export default function BatchesPage() {
   const [showModal, setShowModal] = useState(false);
-  const [form, setForm] = useState({ seriesId: '', totalAssets: '' });
+  const [form, setForm] = useState({ seriesId: '', supply: '', variantName: '', images: [] as string[] });
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [modalPos, setModalPos] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const dragOffset = useRef({ x: 0, y: 0 });
@@ -21,8 +22,8 @@ export default function BatchesPage() {
   const { data: series } = useQuery({ queryKey: ['series'], queryFn: () => api.get('/series').then((res) => res.data.data) });
 
   const createMutation = useMutation({
-    mutationFn: (data: any) => api.post('/batches', data),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['batches'] }); setShowModal(false); setForm({ seriesId: '', totalAssets: '' }); toast.show('배치가 생성되었습니다', 'success'); },
+    mutationFn: (data: any) => api.post('/batches', { ...data, supply: data.supply ? parseInt(data.supply) : 0 }),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['batches'] }); setShowModal(false); setForm({ seriesId: '', supply: '', variantName: '', images: [] }); if (fileInputRef.current) fileInputRef.current.value = ''; toast.show('배치가 생성되었습니다', 'success'); },
     onError: (err: any) => { toast.show(err.response?.data?.message || '배치 생성 실패', 'error'); },
   });
 
@@ -38,7 +39,18 @@ export default function BatchesPage() {
     onError: (err: any) => { toast.show(err.response?.data?.message || '배치 삭제 실패', 'error'); },
   });
 
-  const handleSubmit = (e: React.FormEvent) => { e.preventDefault(); createMutation.mutate({ ...form, totalAssets: form.totalAssets ? parseInt(form.totalAssets) : 0 }); };
+  const handleSubmit = (e: React.FormEvent) => { e.preventDefault(); createMutation.mutate(form); };
+  const handleFilesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    const readers = files.map(file => {
+      return new Promise<string>((resolve) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.readAsDataURL(file);
+      });
+    });
+    Promise.all(readers).then(images => setForm(prev => ({ ...prev, images })));
+  };
   const handleMouseDown = (e: React.MouseEvent) => { const tag = (e.target as HTMLElement).tagName; if (['INPUT','TEXTAREA','SELECT','BUTTON','A'].includes(tag)) return; setIsDragging(true); dragOffset.current = { x: e.clientX - modalPos.x, y: e.clientY - modalPos.y }; };
   const handleMouseMove = (e: React.MouseEvent) => { if (!isDragging) return; setModalPos({ x: e.clientX - dragOffset.current.x, y: e.clientY - dragOffset.current.y }); };
   const handleMouseUp = () => { if (isDragging) setIsDragging(false); };
@@ -65,11 +77,12 @@ export default function BatchesPage() {
           <table className="w-full table-fixed">
             <thead>
               <tr className="border-b border-geo-border">
-                <th className="w-[12%] px-4 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">ID</th>
-                <th className="w-[20%] px-4 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">시리즈</th>
-                <th className="w-[12%] px-4 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">자산수</th>
-                <th className="w-[22%] px-4 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">상태</th>
-                <th className="w-[14%] px-4 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">생성일</th>
+                <th className="w-[10%] px-4 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">ID</th>
+                <th className="w-[16%] px-4 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">시리즈</th>
+                <th className="w-[14%] px-4 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">디자인명</th>
+                <th className="w-[10%] px-4 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">발행량</th>
+                <th className="w-[18%] px-4 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">상태</th>
+                <th className="w-[12%] px-4 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">생성일</th>
                 <th className="w-[20%] px-4 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">액션</th>
               </tr>
             </thead>
@@ -78,7 +91,8 @@ export default function BatchesPage() {
                 <tr key={b.batch_id} className="border-b border-geo-border/50 last:border-0 dark-table-row transition-colors">
                   <td className="px-4 py-3 text-center font-mono text-sm text-status-blue">{b.display_id || '-'}</td>
                   <td className="px-4 py-3 text-center text-txt-primary truncate">{b.series_name || '-'}</td>
-                  <td className="px-4 py-3 text-center text-txt-primary font-mono">{b.items_completed}/{b.items_total}</td>
+                  <td className="px-4 py-3 text-center text-txt-primary truncate">{b.variant_name || '-'}</td>
+                  <td className="px-4 py-3 text-center text-txt-primary font-mono">{b.supply?.toLocaleString() || '-'}</td>
                   <td className="px-3 py-3 text-center">
                     <div className="flex justify-center items-center gap-1 flex-wrap">
                       <span className={`inline-block w-16 px-1 py-1 rounded text-xs font-medium text-center ${getStatusBadge(b.status)}`}>{getStatusLabel(b.status)}</span>
@@ -103,7 +117,7 @@ export default function BatchesPage() {
                   </td>
                 </tr>
               ))}
-              {!batches?.length && <tr><td colSpan={6} className="px-6 py-8 text-center text-txt-muted">배치가 없습니다</td></tr>}
+              {!batches?.length && <tr><td colSpan={7} className="px-6 py-8 text-center text-txt-muted">배치가 없습니다</td></tr>}
             </tbody>
           </table>
         </div>
@@ -167,8 +181,21 @@ export default function BatchesPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs text-txt-secondary mb-1.5">예상 자산 수</label>
-                  <input type="number" placeholder="예상 자산 수" value={form.totalAssets} onChange={(e) => setForm({ ...form, totalAssets: e.target.value })} className="w-full px-4 py-2.5 bg-geo-main border border-geo-border rounded-lg text-txt-primary placeholder-txt-muted focus:ring-2 focus:ring-status-purple/40 outline-none" />
+                  <label className="block text-xs text-txt-secondary mb-1.5">디자인명 (Variant)</label>
+                  <input placeholder="예: 한정판 레드" value={form.variantName} onChange={(e) => setForm({ ...form, variantName: e.target.value })} className="w-full px-4 py-2.5 bg-geo-main border border-geo-border rounded-lg text-txt-primary placeholder-txt-muted focus:ring-2 focus:ring-status-purple/40 outline-none" />
+                </div>
+                <div>
+                  <label className="block text-xs text-txt-secondary mb-1.5">발행량 *</label>
+                  <input type="number" placeholder="예: 10000" value={form.supply} onChange={(e) => setForm({ ...form, supply: e.target.value })} className="w-full px-4 py-2.5 bg-geo-main border border-geo-border rounded-lg text-txt-primary placeholder-txt-muted focus:ring-2 focus:ring-status-purple/40 outline-none" required min="1" />
+                </div>
+                <div>
+                  <label className="block text-xs text-txt-secondary mb-1.5">디자인 이미지 (다중 선택)</label>
+                  <input ref={fileInputRef} type="file" accept="image/*" multiple onChange={handleFilesChange} className="w-full px-4 py-2.5 bg-geo-main border border-geo-border rounded-lg text-txt-primary file:mr-3 file:py-1 file:px-3 file:rounded file:border-0 file:text-xs file:bg-status-purple/20 file:text-status-purple cursor-pointer" />
+                  {form.images.length > 0 && (
+                    <div className="flex gap-2 mt-2 flex-wrap">
+                      {form.images.map((img, i) => <img key={i} src={img} alt={`preview-${i}`} className="w-16 h-16 object-cover rounded-lg border border-geo-border" />)}
+                    </div>
+                  )}
                 </div>
               </div>
               <div className="flex gap-2 mt-6">
