@@ -49,7 +49,11 @@ export default function BatchesPage() {
         reader.readAsDataURL(file);
       });
     });
-    Promise.all(readers).then(images => setForm(prev => ({ ...prev, images })));
+    Promise.all(readers).then(newImages => setForm(prev => ({ ...prev, images: [...prev.images, ...newImages] })));
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+  const handleRemoveImage = (index: number) => {
+    setForm(prev => ({ ...prev, images: prev.images.filter((_, i) => i !== index) }));
   };
   const handleMouseDown = (e: React.MouseEvent) => { const tag = (e.target as HTMLElement).tagName; if (['INPUT','TEXTAREA','SELECT','BUTTON','A'].includes(tag)) return; setIsDragging(true); dragOffset.current = { x: e.clientX - modalPos.x, y: e.clientY - modalPos.y }; };
   const handleMouseMove = (e: React.MouseEvent) => { if (!isDragging) return; setModalPos({ x: e.clientX - dragOffset.current.x, y: e.clientY - dragOffset.current.y }); };
@@ -193,7 +197,12 @@ export default function BatchesPage() {
                   <input ref={fileInputRef} type="file" accept="image/*" multiple onChange={handleFilesChange} className="w-full px-4 py-2.5 bg-geo-main border border-geo-border rounded-lg text-txt-primary file:mr-3 file:py-1 file:px-3 file:rounded file:border-0 file:text-xs file:bg-status-purple/20 file:text-status-purple cursor-pointer" />
                   {form.images.length > 0 && (
                     <div className="flex gap-2 mt-2 flex-wrap">
-                      {form.images.map((img, i) => <img key={i} src={img} alt={`preview-${i}`} className="w-16 h-16 object-cover rounded-lg border border-geo-border" />)}
+                      {form.images.map((img, i) => (
+                        <div key={i} className="relative group">
+                          <img src={img} alt={`preview-${i}`} className="w-16 h-16 object-cover rounded-lg border border-geo-border" />
+                          <button type="button" onClick={() => handleRemoveImage(i)} className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-status-red text-white rounded-full text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-status-red/80">X</button>
+                        </div>
+                      ))}
                     </div>
                   )}
                 </div>
