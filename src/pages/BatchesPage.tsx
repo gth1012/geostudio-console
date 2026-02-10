@@ -27,6 +27,9 @@ export default function BatchesPage() {
   const [imgModalPos, setImgModalPos] = useState({ x: 0, y: 0 });
   const [isImgDragging, setIsImgDragging] = useState(false);
   const imgDragOffset = useRef({ x: 0, y: 0 });
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
@@ -45,6 +48,46 @@ export default function BatchesPage() {
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['batches'] }); setDeleteTarget(null); toast.show('배치가 삭제되었습니다', 'success'); },
     onError: (err: any) => { toast.show(err.response?.data?.message || '배치 삭제 실패', 'error'); },
   });
+
+  // 체크박스 선택 핸들러
+  const handleSelectAll = (checked: boolean) => {
+    if (checked && batches) {
+      const draftIds = batches.filter((b: any) => b.status === 'DRAFT').map((b: any) => b.batch_id);
+      setSelectedIds(new Set(draftIds));
+    } else {
+      setSelectedIds(new Set());
+    }
+  };
+
+  const handleSelectOne = (batchId: string, checked: boolean) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (checked) next.add(batchId);
+      else next.delete(batchId);
+      return next;
+    });
+  };
+
+  // 선택 삭제
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return;
+    setIsBulkDeleting(true);
+    try {
+      const ids = Array.from(selectedIds);
+      await Promise.all(ids.map(id => api.delete(`/batches/${id}`)));
+      queryClient.invalidateQueries({ queryKey: ['batches'] });
+      setSelectedIds(new Set());
+      setShowBulkDeleteModal(false);
+      toast.show(`${ids.length}개 배치가 삭제되었습니다`, 'success');
+    } catch (err: any) {
+      toast.show(err.response?.data?.message || '일부 배치 삭제 실패', 'error');
+    } finally {
+      setIsBulkDeleting(false);
+    }
+  };
+
+  const draftBatches = batches?.filter((b: any) => b.status === 'DRAFT') || [];
+  const allDraftSelected = draftBatches.length > 0 && draftBatches.every((b: any) => selectedIds.has(b.batch_id));
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -155,7 +198,13 @@ export default function BatchesPage() {
   return (
     <div className="animate-fade-in">
       <div className="flex justify-between items-center mb-6">
-        <div />
+        <div>
+          {selectedIds.size > 0 && (
+            <button onClick={() => setShowBulkDeleteModal(true)} className="px-4 py-2 bg-status-red text-white rounded-lg hover:bg-status-red/80 text-sm font-medium transition-all">
+              선택 삭제 ({selectedIds.size}개)
+            </button>
+          )}
+        </div>
         <button onClick={() => { setModalPos({ x: 0, y: 0 }); setShowModal(true); }} className="px-4 py-2 bg-status-purple text-white rounded-lg hover:bg-status-purple/80 text-sm font-medium transition-all">시리즈 선택</button>
       </div>
 
@@ -164,17 +213,23 @@ export default function BatchesPage() {
           <table className="w-full table-fixed">
             <thead>
               <tr className="border-b border-geo-border">
-                <th className="w-[12%] px-4 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">ID</th>
-                <th className="w-[20%] px-4 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">시리즈</th>
-                <th className="w-[12%] px-4 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">발행량</th>
+                <th className="w-[5%] px-2 py-3 text-center">
+                  <input type="checkbox" checked={allDraftSelected && draftBatches.length > 0} onChange={(e) => handleSelectAll(e.target.checked)} className="w-4 h-4 rounded border-geo-border text-status-purple focus:ring-status-purple/40 bg-geo-main cursor-pointer" />
+                </th>
+                <th className="w-[10%] px-4 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">ID</th>
+                <th className="w-[18%] px-4 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">시리즈</th>
+                <th className="w-[10%] px-4 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">발행량</th>
                 <th className="w-[22%] px-4 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">상태</th>
-                <th className="w-[14%] px-4 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">생성일</th>
+                <th className="w-[15%] px-4 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">생성일</th>
                 <th className="w-[20%] px-4 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">액션</th>
               </tr>
             </thead>
             <tbody>
               {batches?.map((b: any) => (
-                <tr key={b.batch_id} className="border-b border-geo-border/50 last:border-0 dark-table-row transition-colors">
+                <tr key={b.batch_id} className={`border-b border-geo-border/50 last:border-0 dark-table-row transition-colors ${selectedIds.has(b.batch_id) ? 'bg-status-purple/10' : ''}`}>
+                  <td className="px-2 py-3 text-center">
+                    <input type="checkbox" checked={selectedIds.has(b.batch_id)} onChange={(e) => handleSelectOne(b.batch_id, e.target.checked)} disabled={b.status !== 'DRAFT'} className="w-4 h-4 rounded border-geo-border text-status-purple focus:ring-status-purple/40 bg-geo-main cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed" />
+                  </td>
                   <td className="px-4 py-3 text-center font-mono text-sm text-status-blue">{b.display_id || '-'}</td>
                   <td className="px-4 py-3 text-center text-txt-primary truncate">{b.series_name || '-'}</td>
                   <td className="px-4 py-3 text-center text-txt-primary font-mono">{b.supply?.toLocaleString() || '-'}</td>
@@ -202,7 +257,7 @@ export default function BatchesPage() {
                   </td>
                 </tr>
               ))}
-              {!batches?.length && <tr><td colSpan={6} className="px-6 py-8 text-center text-txt-muted">시리즈가 없습니다</td></tr>}
+              {!batches?.length && <tr><td colSpan={7} className="px-6 py-8 text-center text-txt-muted">시리즈가 없습니다</td></tr>}
             </tbody>
           </table>
         </div>
@@ -244,6 +299,23 @@ export default function BatchesPage() {
               <button onClick={() => deleteMutation.mutate(deleteTarget.batch_id)} disabled={deleteMutation.isPending}
                 className="px-4 py-2 text-sm font-medium bg-status-red text-white rounded-lg hover:bg-status-red/80 transition-all disabled:opacity-50">
                 {deleteMutation.isPending ? '삭제 중..' : '삭제'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 선택 삭제 확인 모달 */}
+      {showBulkDeleteModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center">
+          <div className="bg-geo-card border border-geo-border rounded-xl w-full max-w-sm p-6">
+            <h3 className="text-base font-semibold text-txt-primary mb-2">선택 삭제</h3>
+            <p className="text-sm text-txt-secondary mb-6">선택한 {selectedIds.size}개 배치를 삭제하시겠습니까?<br />이 작업은 되돌릴 수 없습니다.</p>
+            <div className="flex justify-end gap-3">
+              <button onClick={() => setShowBulkDeleteModal(false)} className="px-4 py-2 text-sm text-txt-secondary border border-geo-border rounded-lg hover:border-geo-border-hover transition-all">취소</button>
+              <button onClick={handleBulkDelete} disabled={isBulkDeleting}
+                className="px-4 py-2 text-sm font-medium bg-status-red text-white rounded-lg hover:bg-status-red/80 transition-all disabled:opacity-50">
+                {isBulkDeleting ? '삭제 중..' : '삭제'}
               </button>
             </div>
           </div>
