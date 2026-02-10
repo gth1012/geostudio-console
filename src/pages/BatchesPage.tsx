@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../services/api';
@@ -7,10 +7,12 @@ import { useToastStore } from '../stores/toast.store';
 interface BatchRow {
   image: string;
   supply: string;
+  fileName: string;
 }
 
 export default function BatchesPage() {
   const [showModal, setShowModal] = useState(false);
+  const [showImageModal, setShowImageModal] = useState(false);
   const [seriesId, setSeriesId] = useState('');
   const [rows, setRows] = useState<BatchRow[]>([]);
   const [isCreating, setIsCreating] = useState(false);
@@ -21,6 +23,10 @@ export default function BatchesPage() {
   const [editTarget, setEditTarget] = useState<{ batch_id: string; name: string } | null>(null);
   const [editName, setEditName] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<{ batch_id: string; name: string } | null>(null);
+  const [dragOver, setDragOver] = useState(false);
+  const [imgModalPos, setImgModalPos] = useState({ x: 0, y: 0 });
+  const [isImgDragging, setIsImgDragging] = useState(false);
+  const imgDragOffset = useRef({ x: 0, y: 0 });
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
@@ -60,21 +66,65 @@ export default function BatchesPage() {
     }
   };
 
-  const handleFilesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
+  const addImagesWithDuplicateCheck = useCallback((newImages: BatchRow[]) => {
+    setRows(prev => {
+      const existingKeys = new Set(prev.map(r => r.fileName));
+      const unique: BatchRow[] = [];
+      let duplicateCount = 0;
+      for (const img of newImages) {
+        if (existingKeys.has(img.fileName)) {
+          duplicateCount++;
+        } else {
+          existingKeys.add(img.fileName);
+          unique.push(img);
+        }
+      }
+      if (duplicateCount > 0) {
+        toast.show(`중복 이미지 ${duplicateCount}개 제외됨`, 'error');
+      }
+      return [...prev, ...unique];
+    });
+  }, [toast]);
+
+  const processFiles = useCallback((files: File[]) => {
     const readers = files.map(file => {
-      return new Promise<string>((resolve) => {
+      return new Promise<BatchRow>((resolve) => {
         const reader = new FileReader();
-        reader.onload = () => resolve(reader.result as string);
+        reader.onload = () => resolve({ image: reader.result as string, supply: '', fileName: file.name });
         reader.readAsDataURL(file);
       });
     });
     Promise.all(readers).then(newImages => {
-      const newRows = newImages.map(image => ({ image, supply: '' }));
-      setRows(prev => [...prev, ...newRows]);
+      addImagesWithDuplicateCheck(newImages);
     });
+  }, [addImagesWithDuplicateCheck]);
+
+  const handleFilesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    processFiles(files);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+    const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
+    if (files.length === 0) {
+      toast.show('이미지 파일만 추가할 수 있습니다', 'error');
+      return;
+    }
+    processFiles(files);
+  }, [processFiles, toast]);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+  }, []);
 
   const handleRemoveRow = (index: number) => {
     setRows(prev => prev.filter((_, i) => i !== index));
@@ -87,6 +137,10 @@ export default function BatchesPage() {
   const handleMouseDown = (e: React.MouseEvent) => { const tag = (e.target as HTMLElement).tagName; if (['INPUT','TEXTAREA','SELECT','BUTTON','A'].includes(tag)) return; setIsDragging(true); dragOffset.current = { x: e.clientX - modalPos.x, y: e.clientY - modalPos.y }; };
   const handleMouseMove = (e: React.MouseEvent) => { if (!isDragging) return; setModalPos({ x: e.clientX - dragOffset.current.x, y: e.clientY - dragOffset.current.y }); };
   const handleMouseUp = () => { if (isDragging) setIsDragging(false); };
+
+  const handleImgMouseDown = (e: React.MouseEvent) => { const tag = (e.target as HTMLElement).tagName; if (['INPUT','TEXTAREA','SELECT','BUTTON','A','SVG','PATH'].includes(tag)) return; setIsImgDragging(true); imgDragOffset.current = { x: e.clientX - imgModalPos.x, y: e.clientY - imgModalPos.y }; };
+  const handleImgMouseMove = (e: React.MouseEvent) => { if (!isImgDragging) return; setImgModalPos({ x: e.clientX - imgDragOffset.current.x, y: e.clientY - imgDragOffset.current.y }); };
+  const handleImgMouseUp = () => { if (isImgDragging) setIsImgDragging(false); };
 
   const getStatusBadge = (status: string) => {
     const map: Record<string, string> = { COMPLETED: 'bg-status-green-dim text-status-green', IN_PROGRESS: 'bg-status-yellow-dim text-status-yellow', FAILED: 'bg-status-red-dim text-status-red', DRAFT: 'bg-status-yellow-dim text-status-yellow', LOCKED: 'bg-status-purple-dim text-status-purple', SHIPPED: 'bg-status-green-dim text-status-green' };
@@ -102,10 +156,10 @@ export default function BatchesPage() {
     <div className="animate-fade-in">
       <div className="flex justify-between items-center mb-6">
         <div />
-        <button onClick={() => { setModalPos({ x: 0, y: 0 }); setShowModal(true); }} className="px-4 py-2 bg-status-purple text-white rounded-lg hover:bg-status-purple/80 text-sm font-medium transition-all">+ 새 배치</button>
+        <button onClick={() => { setModalPos({ x: 0, y: 0 }); setShowModal(true); }} className="px-4 py-2 bg-status-purple text-white rounded-lg hover:bg-status-purple/80 text-sm font-medium transition-all">시리즈 선택</button>
       </div>
 
-      {isLoading ? <p className="text-txt-secondary">로딩 중...</p> : (
+      {isLoading ? <p className="text-txt-secondary">로딩 중..</p> : (
         <div className="bg-geo-card border border-geo-border rounded-xl overflow-visible">
           <table className="w-full table-fixed">
             <thead>
@@ -148,7 +202,7 @@ export default function BatchesPage() {
                   </td>
                 </tr>
               ))}
-              {!batches?.length && <tr><td colSpan={6} className="px-6 py-8 text-center text-txt-muted">배치가 없습니다</td></tr>}
+              {!batches?.length && <tr><td colSpan={6} className="px-6 py-8 text-center text-txt-muted">시리즈가 없습니다</td></tr>}
             </tbody>
           </table>
         </div>
@@ -171,7 +225,7 @@ export default function BatchesPage() {
               <div className="flex gap-2 mt-6">
                 <button type="button" onClick={() => setEditTarget(null)} className="flex-1 px-4 py-2.5 border border-geo-border rounded-lg text-txt-secondary hover:text-txt-primary transition-all">취소</button>
                 <button type="submit" disabled={updateMutation.isPending} className="flex-1 px-4 py-2.5 bg-status-purple text-white rounded-lg font-medium hover:bg-status-purple/80 transition-all disabled:opacity-50">
-                  {updateMutation.isPending ? '저장 중...' : '저장'}
+                  {updateMutation.isPending ? '수정 중..' : '수정'}
                 </button>
               </div>
             </form>
@@ -189,37 +243,36 @@ export default function BatchesPage() {
               <button onClick={() => setDeleteTarget(null)} className="px-4 py-2 text-sm text-txt-secondary border border-geo-border rounded-lg hover:border-geo-border-hover transition-all">취소</button>
               <button onClick={() => deleteMutation.mutate(deleteTarget.batch_id)} disabled={deleteMutation.isPending}
                 className="px-4 py-2 text-sm font-medium bg-status-red text-white rounded-lg hover:bg-status-red/80 transition-all disabled:opacity-50">
-                {deleteMutation.isPending ? '삭제 중...' : '삭제'}
+                {deleteMutation.isPending ? '삭제 중..' : '삭제'}
               </button>
             </div>
           </div>
         </div>
       )}
 
+      {/* 새 배치 생성 모달 */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-start justify-center pt-20 px-4 pb-4" onMouseMove={handleMouseMove} onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp}>
-          <div className="bg-geo-card border border-geo-border rounded-xl w-full max-w-md flex flex-col cursor-move select-none" style={{ maxHeight: '85vh', transform: `translate(${modalPos.x}px, ${modalPos.y}px)` }} onMouseDown={handleMouseDown}>
-            <div className="bg-geo-main px-6 py-3 border-b border-geo-border rounded-t-xl flex-shrink-0">
-              <h2 className="text-lg font-semibold text-txt-primary">새 배치 생성</h2>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50" onMouseMove={handleMouseMove} onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp}>
+          <div className="absolute top-4 left-4 bg-geo-card border border-geo-border rounded-xl w-full max-w-md flex flex-col cursor-move select-none" style={{ maxHeight: '85vh', transform: `translate(${modalPos.x}px, ${modalPos.y}px)` }} onMouseDown={handleMouseDown}>
+            <div className="bg-geo-main px-4 py-3 border-b border-geo-border rounded-t-xl flex-shrink-0 flex justify-center">
+              <select value={seriesId} onChange={(e) => setSeriesId(e.target.value)} className="px-4 py-2 bg-geo-card border border-geo-border rounded-lg text-txt-primary focus:ring-2 focus:ring-status-purple/40 outline-none text-sm font-medium" required>
+                <option value="">시리즈를 선택하세요</option>
+                {series?.map((s: any) => <option key={s.series_id} value={s.series_id}>{s.name}</option>)}
+              </select>
             </div>
             <form onSubmit={handleSubmit} className="p-6 overflow-y-auto">
               <div className="space-y-4">
                 <div>
-                  <label className="block text-xs text-txt-secondary mb-1.5">시리즈 선택 *</label>
-                  <select value={seriesId} onChange={(e) => setSeriesId(e.target.value)} className="w-full px-4 py-2.5 bg-geo-main border border-geo-border rounded-lg text-txt-primary focus:ring-2 focus:ring-status-purple/40 outline-none" required>
-                    <option value="">시리즈를 선택하세요</option>
-                    {series?.map((s: any) => <option key={s.series_id} value={s.series_id}>{s.name}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs text-txt-secondary mb-1.5">디자인 이미지 추가</label>
-                  <input ref={fileInputRef} type="file" accept="image/*" multiple onChange={handleFilesChange} className="w-full px-4 py-2.5 bg-geo-main border border-geo-border rounded-lg text-txt-primary file:mr-3 file:py-1 file:px-3 file:rounded file:border-0 file:text-xs file:bg-status-purple/20 file:text-status-purple cursor-pointer" />
+                  <button type="button" disabled={!seriesId} onClick={() => { setImgModalPos({ x: 0, y: 0 }); setShowImageModal(true); }} className="w-full px-4 py-2.5 bg-status-purple/20 text-status-purple rounded-lg font-medium hover:bg-status-purple/30 transition-all text-sm disabled:opacity-30 disabled:cursor-not-allowed">
+                    + 디자인 이미지 추가
+                  </button>
                 </div>
                 {rows.length > 0 && (
                   <div className="space-y-3">
                     <label className="block text-xs text-txt-secondary">배치 목록 ({rows.length}개)</label>
                     {rows.map((row, i) => (
                       <div key={i} className="flex items-center gap-3 p-2 bg-geo-main rounded-lg border border-geo-border">
+                        <span className="text-xs text-txt-muted font-mono w-6 text-center flex-shrink-0">{i + 1}</span>
                         <img src={row.image} alt={`batch-${i}`} className="w-12 h-12 object-cover rounded-lg border border-geo-border flex-shrink-0" />
                         <input type="number" placeholder="발행량" value={row.supply} onChange={(e) => handleSupplyChange(i, e.target.value)} className="flex-1 px-3 py-2 bg-geo-card border border-geo-border rounded-lg text-txt-primary placeholder-txt-muted text-sm focus:ring-2 focus:ring-status-purple/40 outline-none" min="1" required />
                         <button type="button" onClick={() => handleRemoveRow(i)} className="w-8 h-8 bg-status-red/20 text-status-red rounded-lg flex items-center justify-center hover:bg-status-red/30 transition-all flex-shrink-0">X</button>
@@ -235,6 +288,49 @@ export default function BatchesPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* 이미지 추가 모달 */}
+      {showImageModal && (
+        <div className="fixed inset-0 z-[60]" onMouseMove={handleImgMouseMove} onMouseUp={handleImgMouseUp} onMouseLeave={handleImgMouseUp}>
+          <div className="absolute top-4 left-[460px] bg-geo-card border border-geo-border rounded-xl w-full max-w-lg cursor-move select-none" style={{ transform: `translate(${imgModalPos.x}px, ${imgModalPos.y}px)` }} onMouseDown={handleImgMouseDown}>
+            <div className="bg-geo-main px-6 py-3 border-b border-geo-border rounded-t-xl flex items-center justify-between">
+              <h2 className="text-base font-semibold text-txt-primary">디자인 이미지 추가</h2>
+              <button onClick={() => setShowImageModal(false)} className="w-7 h-7 flex items-center justify-center rounded-lg text-txt-muted hover:text-txt-primary hover:bg-geo-card-hover transition-all">
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12" /></svg>
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div
+                onDrop={handleDrop}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                className={`border-2 border-dashed rounded-lg px-4 py-3 text-center transition-all cursor-pointer flex items-center justify-center gap-3 ${dragOver ? 'border-status-purple bg-status-purple/10' : 'border-geo-border hover:border-status-purple/50'}`}
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <input ref={fileInputRef} type="file" accept="image/*" multiple onChange={handleFilesChange} className="hidden" />
+                <span className="text-xl">&#128193;</span>
+                <span className="text-sm text-txt-primary font-medium">이미지 업로드</span>
+              </div>
+              {rows.length > 0 && (
+                <div>
+                  <label className="block text-xs text-txt-secondary mb-2">추가된 이미지 ({rows.length}개)</label>
+                  <div className="grid grid-cols-5 gap-2 max-h-40 overflow-y-auto">
+                    {rows.map((row, i) => (
+                      <div key={i} className="relative group">
+                        <img src={row.image} alt={`img-${i}`} className="w-full aspect-square object-cover rounded-lg border border-geo-border" />
+                        <span className="absolute top-0.5 left-0.5 bg-black/60 text-white text-[10px] px-1 rounded">{i + 1}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <button onClick={() => setShowImageModal(false)} className="w-full px-4 py-2.5 bg-status-purple text-white rounded-lg font-medium hover:bg-status-purple/80 transition-all text-sm">
+                확인 ({rows.length}개 선택됨)
+              </button>
+            </div>
           </div>
         </div>
       )}
