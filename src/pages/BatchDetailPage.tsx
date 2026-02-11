@@ -27,8 +27,8 @@ export default function BatchDetailPage() {
   const ITEMS_PER_PAGE = 50;
 
   const createAssetsMutation = useMutation({
-    mutationFn: (data: { batchId: string; seriesId: string; count: number }) => api.post('/assets/bulk', data),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['assets', id] }); queryClient.invalidateQueries({ queryKey: ['batch', id] }); setShowAssetModal(false); setAssetCount('100'); toast.show('자산이 생성되었습니다', 'success'); },
+    mutationFn: (data: { batch_id: string; quantity: number }) => api.post('/assets/bulk', data),
+    onSuccess: (res) => { queryClient.invalidateQueries({ queryKey: ['assets', id] }); queryClient.invalidateQueries({ queryKey: ['batch', id] }); setShowAssetModal(false); setAssetCount('100'); toast.show(res.data.message || '자산 생성이 시작되었습니다', 'success'); },
     onError: (err: any) => { toast.show(err.response?.data?.message || '자산 생성 실패', 'error'); },
   });
 
@@ -81,7 +81,7 @@ export default function BatchDetailPage() {
     e.target.value = '';
   }, [selectedAsset, uploadReferenceMutation]);
 
-  const handleCreateAssets = () => { if (!batch) return; createAssetsMutation.mutate({ batchId: batch.batch_id, seriesId: batch.series_id, count: parseInt(assetCount) }); };
+  const handleCreateAssets = () => { if (!batch) return; createAssetsMutation.mutate({ batch_id: batch.batch_id, quantity: parseInt(assetCount) || 0 }); };
   const handleMouseDown = (e: React.MouseEvent) => { const tag = (e.target as HTMLElement).tagName; if (['INPUT','TEXTAREA','SELECT','BUTTON','A'].includes(tag)) return; setIsDragging(true); dragOffset.current = { x: e.clientX - modalPos.x, y: e.clientY - modalPos.y }; };
   const handleMouseMove = (e: React.MouseEvent) => { if (!isDragging) return; setModalPos({ x: e.clientX - dragOffset.current.x, y: e.clientY - dragOffset.current.y }); };
   const handleMouseUp = () => { if (isDragging) setIsDragging(false); };

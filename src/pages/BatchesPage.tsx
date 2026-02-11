@@ -20,8 +20,6 @@ export default function BatchesPage() {
   const [modalPos, setModalPos] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const dragOffset = useRef({ x: 0, y: 0 });
-  const [editTarget, setEditTarget] = useState<{ batch_id: string; name: string } | null>(null);
-  const [editName, setEditName] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<{ batch_id: string; name: string } | null>(null);
   const [dragOver, setDragOver] = useState(false);
   const [imgModalPos, setImgModalPos] = useState({ x: 0, y: 0 });
@@ -36,12 +34,6 @@ export default function BatchesPage() {
   const toast = useToastStore();
   const { data: batches, isLoading } = useQuery({ queryKey: ['batches'], queryFn: () => api.get('/batches').then((res) => res.data.data) });
   const { data: series } = useQuery({ queryKey: ['series'], queryFn: () => api.get('/series').then((res) => res.data.data) });
-
-  const updateMutation = useMutation({
-    mutationFn: ({ id, name }: { id: string; name: string }) => api.patch(`/batches/${id}`, { name }),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['batches'] }); setEditTarget(null); toast.show('배치가 수정되었습니다', 'success'); },
-    onError: (err: any) => { toast.show(err.response?.data?.message || '배치 수정 실패', 'error'); },
-  });
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => api.delete(`/batches/${id}`),
@@ -249,8 +241,6 @@ export default function BatchesPage() {
                     <div className="flex justify-center gap-1">
                       <button onClick={() => navigate(`/batches/${b.batch_id}`)}
                         className="w-12 px-1 py-1 text-xs bg-status-purple text-white rounded hover:bg-status-purple/80 transition-all">생성</button>
-                      <button disabled={b.status !== 'DRAFT'} onClick={() => { setEditTarget({ batch_id: b.batch_id, name: b.name || '' }); setEditName(b.name || ''); }}
-                        className="w-12 px-1 py-1 text-xs bg-status-purple/10 text-status-purple rounded hover:bg-status-purple/20 disabled:opacity-30 disabled:cursor-not-allowed transition-all">수정</button>
                       <button disabled={b.status !== 'DRAFT'} onClick={() => setDeleteTarget({ batch_id: b.batch_id, name: b.display_id || b.batch_id })}
                         className="w-12 px-1 py-1 text-xs bg-status-red-dim text-status-red rounded hover:bg-status-red/20 disabled:opacity-30 disabled:cursor-not-allowed transition-all">삭제</button>
                     </div>
@@ -260,31 +250,6 @@ export default function BatchesPage() {
               {!batches?.length && <tr><td colSpan={7} className="px-6 py-8 text-center text-txt-muted">시리즈가 없습니다</td></tr>}
             </tbody>
           </table>
-        </div>
-      )}
-
-      {/* 수정 모달 */}
-      {editTarget && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center">
-          <div className="bg-geo-card border border-geo-border rounded-xl w-full max-w-sm">
-            <div className="bg-geo-main px-6 py-3 border-b border-geo-border rounded-t-xl flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-txt-primary">배치명 수정</h2>
-              <button onClick={() => setEditTarget(null)} className="w-7 h-7 flex items-center justify-center rounded-lg text-txt-muted hover:text-txt-primary hover:bg-geo-card-hover transition-all">
-                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12" /></svg>
-              </button>
-            </div>
-            <form onSubmit={(e) => { e.preventDefault(); updateMutation.mutate({ id: editTarget.batch_id, name: editName }); }} className="p-6">
-              <label className="block text-xs text-txt-secondary mb-1.5">배치명</label>
-              <input value={editName} onChange={(e) => setEditName(e.target.value)} placeholder="배치명"
-                className="w-full px-4 py-2.5 bg-geo-main border border-geo-border rounded-lg text-txt-primary placeholder-txt-muted focus:ring-2 focus:ring-status-purple/40 outline-none" autoFocus />
-              <div className="flex gap-2 mt-6">
-                <button type="button" onClick={() => setEditTarget(null)} className="flex-1 px-4 py-2.5 border border-geo-border rounded-lg text-txt-secondary hover:text-txt-primary transition-all">취소</button>
-                <button type="submit" disabled={updateMutation.isPending} className="flex-1 px-4 py-2.5 bg-status-purple text-white rounded-lg font-medium hover:bg-status-purple/80 transition-all disabled:opacity-50">
-                  {updateMutation.isPending ? '수정 중..' : '수정'}
-                </button>
-              </div>
-            </form>
-          </div>
         </div>
       )}
 
