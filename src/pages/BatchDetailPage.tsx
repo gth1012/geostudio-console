@@ -9,20 +9,22 @@ export default function BatchDetailPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [showAssetModal, setShowAssetModal] = useState(false);
-  const [assetCount, setAssetCount] = useState('100');
+  const [assetCount, setAssetCount] = useState('');
   const [modalPos, setModalPos] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const dragOffset = useRef({ x: 0, y: 0 });
 
   const toast = useToastStore();
   const { data: batch, isLoading: batchLoading } = useQuery({ queryKey: ['batch', id], queryFn: () => api.get(`/batches/${id}`).then((res) => res.data.data) });
+  const { data: seriesList } = useQuery({ queryKey: ['series'], queryFn: () => api.get('/series').then((res) => res.data.data) });
+  const [selectedSeriesId, setSelectedSeriesId] = useState<string>('');
 
   const [showLockConfirm, setShowLockConfirm] = useState(false);
   const [showUnlockConfirm, setShowUnlockConfirm] = useState(false);
 
   const createAssetsMutation = useMutation({
     mutationFn: (data: { batch_id: string; quantity: number }) => api.post('/assets/bulk', data),
-    onSuccess: (res) => { queryClient.invalidateQueries({ queryKey: ['batch', id] }); setShowAssetModal(false); setAssetCount('100'); toast.show(res.data.message || '자산 생성이 시작되었습니다', 'success'); },
+    onSuccess: (res) => { queryClient.invalidateQueries({ queryKey: ['batch', id] }); setShowAssetModal(false); setAssetCount(''); toast.show(res.data.message || '자산 생성이 시작되었습니다', 'success'); },
     onError: (err: any) => { toast.show(err.response?.data?.message || '자산 생성 실패', 'error'); },
   });
 
@@ -81,10 +83,16 @@ export default function BatchDetailPage() {
           {batch.batch_locked_until && new Date(batch.batch_locked_until) > new Date() && (
             <button onClick={() => setShowUnlockConfirm(true)} className="px-4 py-2 bg-status-yellow text-geo-deep rounded-lg hover:bg-status-yellow/80 text-sm font-medium transition-all">잠금 해제</button>
           )}
-          {batch.status === 'DRAFT' && (
+          {batch.status === 'DRAFT' ? (
             <button onClick={() => setShowLockConfirm(true)} className="px-4 py-2 bg-status-red text-white rounded-lg hover:bg-status-red/80 text-sm font-medium transition-all">LOCK 확정</button>
+          ) : (
+            <span className="px-4 py-2 bg-status-green text-white rounded-lg text-sm font-medium">확정</span>
           )}
-          <button onClick={() => { setModalPos({ x: 0, y: 0 }); setShowAssetModal(true); }} className="px-4 py-2 bg-status-purple text-white rounded-lg hover:bg-status-purple/80 text-sm font-medium transition-all">+ 자산 생성</button>
+          {batch.status === 'DRAFT' ? (
+            <button onClick={() => { setModalPos({ x: 0, y: 0 }); setSelectedSeriesId(batch.series_id || ''); setShowAssetModal(true); }} className="px-4 py-2 bg-status-purple text-white rounded-lg hover:bg-status-purple/80 text-sm font-medium transition-all">+ 자산 생성</button>
+          ) : (
+            <span className="px-4 py-2 bg-status-green text-white rounded-lg text-sm font-medium">확정</span>
+          )}
         </div>
       </div>
 
@@ -191,17 +199,22 @@ export default function BatchDetailPage() {
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-start justify-center pt-20 px-4 pb-4" onMouseMove={handleMouseMove} onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp}>
           <div className="bg-geo-card border border-geo-border rounded-xl w-full max-w-sm flex flex-col cursor-move select-none" style={{ maxHeight: '85vh', transform: `translate(${modalPos.x}px, ${modalPos.y}px)` }} onMouseDown={handleMouseDown}>
             <div className="bg-geo-main px-6 py-3 border-b border-geo-border rounded-t-xl flex-shrink-0">
-              <h2 className="text-lg font-semibold text-txt-primary">자산 대량 생성</h2>
+              <h2 className="text-lg font-semibold text-txt-primary">자산 생성</h2>
             </div>
             <div className="p-6 overflow-y-auto">
               <div className="space-y-4">
                 <div>
                   <label className="block text-xs text-txt-secondary mb-1.5">시리즈</label>
-                  <p className="px-4 py-2.5 bg-geo-main border border-geo-border rounded-lg text-txt-primary">{batch.series?.name || '-'}</p>
+                  <select value={selectedSeriesId} onChange={(e) => setSelectedSeriesId(e.target.value)} className="w-full px-4 py-2.5 bg-geo-main border border-geo-border rounded-lg text-txt-primary focus:ring-2 focus:ring-status-purple/40 outline-none">
+                    <option value="">시리즈 선택</option>
+                    {seriesList?.map((s: any) => (
+                      <option key={s.series_id} value={s.series_id}>{s.name} ({s.code || '-'})</option>
+                    ))}
+                  </select>
                 </div>
                 <div>
                   <label className="block text-xs text-txt-secondary mb-1.5">생성할 자산 수</label>
-                  <input type="number" value={assetCount} onChange={(e) => setAssetCount(e.target.value)} className="w-full px-4 py-2.5 bg-geo-main border border-geo-border rounded-lg text-txt-primary focus:ring-2 focus:ring-status-purple/40 outline-none" min="1" max="10000" />
+                  <input type="number" value={assetCount} onChange={(e) => setAssetCount(e.target.value)} placeholder="수량 입력" className="w-full px-4 py-2.5 bg-geo-main border border-geo-border rounded-lg text-txt-primary placeholder-txt-muted focus:ring-2 focus:ring-status-purple/40 outline-none" min="1" max="10000" />
                 </div>
               </div>
               <div className="flex gap-2 mt-6">
