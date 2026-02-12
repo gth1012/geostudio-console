@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { QRCodeSVG } from 'qrcode.react';
 import api from '../services/api';
@@ -12,9 +12,35 @@ export default function AssetsPage() {
   const [isDragging, setIsDragging] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedAsset, setSelectedAsset] = useState<any>(null);
+  const [assetImageUrl, setAssetImageUrl] = useState<string | null>(null);
+  const [imageLoading, setImageLoading] = useState(false);
   const dragOffset = useRef({ x: 0, y: 0 });
   const queryClient = useQueryClient();
   const toast = useToastStore();
+
+  // 선택된 에셋 변경 시 이미지 URL 로드
+  useEffect(() => {
+    if (!selectedAsset) {
+      setAssetImageUrl(null);
+      return;
+    }
+
+    const fetchImageUrl = async () => {
+      setImageLoading(true);
+      setAssetImageUrl(null);
+      try {
+        const res = await api.get(`/assets/${selectedAsset.asset_id}/image`);
+        setAssetImageUrl(res.data.url);
+      } catch {
+        // 404 또는 에러 시 이미지 없음
+        setAssetImageUrl(null);
+      } finally {
+        setImageLoading(false);
+      }
+    };
+
+    fetchImageUrl();
+  }, [selectedAsset?.asset_id]);
 
   const ITEMS_PER_PAGE = 50;
 
@@ -171,9 +197,28 @@ export default function AssetsPage() {
             </button>
           </div>
           <div className="flex-1 overflow-y-auto p-6">
-            <div className="bg-white p-4 rounded-xl flex justify-center mb-6">
+            <div className="bg-white p-4 rounded-xl flex justify-center mb-4">
               <QRCodeSVG id="qr-code-svg" value={selectedAsset.dina_id} size={200} level="H" />
             </div>
+
+            {/* 원본 이미지 */}
+            {imageLoading && (
+              <div className="flex justify-center items-center py-4 mb-4">
+                <svg className="animate-spin h-6 w-6 text-status-purple" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+              </div>
+            )}
+            {!imageLoading && assetImageUrl && (
+              <div className="mb-4">
+                <p className="text-xs text-txt-muted uppercase tracking-wider mb-2">원본 이미지</p>
+                <div className="bg-geo-main border border-geo-border rounded-xl overflow-hidden">
+                  <img src={assetImageUrl} alt="Asset cover" className="w-full h-auto object-contain" />
+                </div>
+              </div>
+            )}
+
             <div className="space-y-4">
               <div>
                 <p className="text-xs text-txt-muted uppercase tracking-wider mb-1">DINA ID</p>
