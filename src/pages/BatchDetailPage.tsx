@@ -16,8 +16,6 @@ export default function BatchDetailPage() {
 
   const toast = useToastStore();
   const { data: batch, isLoading: batchLoading } = useQuery({ queryKey: ['batch', id], queryFn: () => api.get(`/batches/${id}`).then((res) => res.data.data) });
-  const { data: seriesList } = useQuery({ queryKey: ['series'], queryFn: () => api.get('/series').then((res) => res.data.data) });
-  const [selectedSeriesId, setSelectedSeriesId] = useState<string>('');
 
   const [showLockConfirm, setShowLockConfirm] = useState(false);
   const [showUnlockConfirm, setShowUnlockConfirm] = useState(false);
@@ -89,7 +87,7 @@ export default function BatchDetailPage() {
             <span className="px-4 py-2 bg-status-green text-white rounded-lg text-sm font-medium">확정</span>
           )}
           {batch.status === 'DRAFT' ? (
-            <button onClick={() => { setModalPos({ x: 0, y: 0 }); setSelectedSeriesId(batch.series_id || ''); setShowAssetModal(true); }} className="px-4 py-2 bg-status-purple text-white rounded-lg hover:bg-status-purple/80 text-sm font-medium transition-all">+ 자산 생성</button>
+            <button onClick={() => { setModalPos({ x: 0, y: 0 }); setShowAssetModal(true); }} className="px-4 py-2 bg-status-purple text-white rounded-lg hover:bg-status-purple/80 text-sm font-medium transition-all">+ 자산 생성</button>
           ) : (
             <span className="px-4 py-2 bg-status-green text-white rounded-lg text-sm font-medium">확정</span>
           )}
@@ -196,22 +194,29 @@ export default function BatchDetailPage() {
       )}
 
       {showAssetModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-start justify-center pt-20 px-4 pb-4" onMouseMove={handleMouseMove} onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp}>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center px-4" onMouseMove={handleMouseMove} onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp}>
           <div className="bg-geo-card border border-geo-border rounded-xl w-full max-w-sm flex flex-col cursor-move select-none" style={{ maxHeight: '85vh', transform: `translate(${modalPos.x}px, ${modalPos.y}px)` }} onMouseDown={handleMouseDown}>
             <div className="bg-geo-main px-6 py-3 border-b border-geo-border rounded-t-xl flex-shrink-0">
               <h2 className="text-lg font-semibold text-txt-primary">자산 생성</h2>
             </div>
+            {batch.image && (
+              <div className="px-6 py-3">
+                <img src={batch.image} alt="Batch image" className="w-16 h-16 rounded-md object-cover border border-geo-border" />
+              </div>
+            )}
+            <div className="px-6 pb-3">
+              <div className="text-xs text-txt-secondary">Series</div>
+              <div className="text-sm text-txt-primary font-medium">
+                {batch.series_name ?? '—'} ({batch.series_code ?? '-'})
+              </div>
+
+              <div className="mt-2 text-xs text-txt-secondary">Batch</div>
+              <div className="text-sm text-txt-primary font-medium">
+                {batch.display_id ?? '—'}
+              </div>
+            </div>
             <div className="p-6 overflow-y-auto">
               <div className="space-y-4">
-                <div>
-                  <label className="block text-xs text-txt-secondary mb-1.5">시리즈</label>
-                  <select value={selectedSeriesId} onChange={(e) => setSelectedSeriesId(e.target.value)} className="w-full px-4 py-2.5 bg-geo-main border border-geo-border rounded-lg text-txt-primary focus:ring-2 focus:ring-status-purple/40 outline-none">
-                    <option value="">시리즈 선택</option>
-                    {seriesList?.map((s: any) => (
-                      <option key={s.series_id} value={s.series_id}>{s.name} ({s.code || '-'})</option>
-                    ))}
-                  </select>
-                </div>
                 <div>
                   <label className="block text-xs text-txt-secondary mb-1.5">생성할 자산 수</label>
                   <input type="number" value={assetCount} onChange={(e) => setAssetCount(e.target.value)} placeholder="수량 입력" className="w-full px-4 py-2.5 bg-geo-main border border-geo-border rounded-lg text-txt-primary placeholder-txt-muted focus:ring-2 focus:ring-status-purple/40 outline-none" min="1" max="10000" />
