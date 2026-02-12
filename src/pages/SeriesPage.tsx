@@ -38,12 +38,9 @@ export default function SeriesPage() {
   const [editTarget, setEditTarget] = useState<{ series_id: string; name: string; code: string; description: string; artist_name: string; material: string; thumbnail_image?: string } | null>(null);
   const [editForm, setEditForm] = useState({ name: '', code: '', description: '', artistName: '', material: 'paper_art' });
   const [confirmModal, setConfirmModal] = useState<{ show: boolean; message: string; subMessage?: string; onConfirm: () => void; confirmBtnClass?: string }>({ show: false, message: '', onConfirm: () => {} });
-  // Image upload state
-  const [selectedImage, setSelectedImage] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  // Image upload state (edit modal only)
   const [editSelectedImage, setEditSelectedImage] = useState<File | null>(null);
   const [editImagePreview, setEditImagePreview] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const editFileInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
 
@@ -58,24 +55,11 @@ export default function SeriesPage() {
     return api.post(`/series/${seriesId}/image`, formData, { headers: { 'Content-Type': 'multipart/form-data' } });
   };
 
-  const createMutation = useMutation({ mutationFn: (data: any) => api.post('/series', { ...data, insertionMethod: materialCarrier(data.material) }), onSuccess: async (res) => {
-    const createdSeriesId = res.data?.data?.series_id;
-    // Upload image if selected
-    if (selectedImage && createdSeriesId) {
-      try {
-        await uploadSeriesImage(createdSeriesId, selectedImage);
-        toast.show('시리즈가 생성되었습니다 (이미지 업로드 완료)', 'success');
-      } catch (imgErr: any) {
-        toast.show('시리즈 생성됨, 이미지 업로드 실패: ' + (imgErr.response?.data?.message || imgErr.message), 'error');
-      }
-    } else {
-      toast.show('시리즈가 생성되었습니다', 'success');
-    }
+  const createMutation = useMutation({ mutationFn: (data: any) => api.post('/series', { ...data, insertionMethod: materialCarrier(data.material) }), onSuccess: () => {
+    toast.show('시리즈가 생성되었습니다', 'success');
     queryClient.invalidateQueries({ queryKey: ['series'] });
     setShowModal(false);
     setForm({ name: '', description: '', artistName: '', material: 'paper_art' });
-    setSelectedImage(null);
-    setImagePreview(null);
   }, onError: (err: any) => { toast.show(err.response?.data?.message || '시리즈 생성 실패', 'error'); } });
   const updateMutation = useMutation({ mutationFn: ({ id, data }: { id: string; data: any }) => api.patch(`/series/${id}`, { ...data, insertion_method: materialCarrier(data.material) }), onSuccess: async (_res, variables) => {
     // Upload image if selected
@@ -102,16 +86,7 @@ export default function SeriesPage() {
 
   const handleSubmit = (e: React.FormEvent) => { e.preventDefault(); if (createMutation.isPending) return; createMutation.mutate(form); };
 
-  // Image selection handlers
-  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setSelectedImage(file);
-      const reader = new FileReader();
-      reader.onloadend = () => setImagePreview(reader.result as string);
-      reader.readAsDataURL(file);
-    }
-  };
+  // Image selection handler (edit modal only)
   const handleEditImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -121,7 +96,6 @@ export default function SeriesPage() {
       reader.readAsDataURL(file);
     }
   };
-  const clearSelectedImage = () => { setSelectedImage(null); setImagePreview(null); if (fileInputRef.current) fileInputRef.current.value = ''; };
   const clearEditSelectedImage = () => { setEditSelectedImage(null); setEditImagePreview(null); if (editFileInputRef.current) editFileInputRef.current.value = ''; };
   const handleDeactivate = (id: string, name: string) => { setConfirmModal({ show: true, message: `"${name}" 시리즈를 비활성화 하시겠습니까?`, confirmBtnClass: 'bg-status-yellow-dim text-status-yellow hover:bg-status-yellow/20', onConfirm: () => { archiveMutation.mutate(id); setConfirmModal({ ...confirmModal, show: false }); } }); };
   const handleActivate = (id: string, name: string) => { setConfirmModal({ show: true, message: `"${name}" 시리즈를 활성화 하시겠습니까?`, onConfirm: () => { activateMutation.mutate(id); setConfirmModal({ ...confirmModal, show: false }); } }); };
@@ -280,12 +254,12 @@ export default function SeriesPage() {
       )}
 
       {showModal && (
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-start justify-center overflow-y-auto pt-8 pb-8" onMouseMove={handleMouseMove} onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp}>
-          <div className="bg-geo-card border border-geo-border rounded-xl w-full max-w-sm max-h-[85vh] overflow-y-auto flex flex-col cursor-move select-none mx-4" style={{ transform: `translate(${modalPos.x}px, ${modalPos.y}px)` }} onMouseDown={handleMouseDown}>
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center" onMouseMove={handleMouseMove} onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp}>
+          <div className="bg-geo-card border border-geo-border rounded-xl w-full max-w-sm flex flex-col cursor-move select-none mx-4" style={{ transform: `translate(${modalPos.x}px, ${modalPos.y}px)` }} onMouseDown={handleMouseDown}>
             <div className="bg-geo-main px-6 py-3 border-b border-geo-border rounded-t-xl flex-shrink-0">
               <h2 className="text-lg font-semibold text-txt-primary">새 시리즈 생성</h2>
             </div>
-            <form onSubmit={handleSubmit} className="p-6 overflow-y-auto">
+            <form onSubmit={handleSubmit} className="p-6">
               <div className="space-y-4">
                 <div>
                   <label className="block text-xs text-txt-secondary mb-1.5">시리즈 이름 *</label>
@@ -306,26 +280,9 @@ export default function SeriesPage() {
                   <label className="block text-xs text-txt-secondary mb-1.5">설명</label>
                   <textarea placeholder="설명 (선택)" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="w-full px-4 py-2.5 bg-geo-main border border-geo-border rounded-lg text-txt-primary placeholder-txt-muted focus:ring-2 focus:ring-status-purple/40 focus:border-status-purple/60 outline-none transition-all resize-none" rows={2} />
                 </div>
-                <div>
-                  <label className="block text-xs text-txt-secondary mb-1.5">커버 이미지 (선택)</label>
-                  <input type="file" ref={fileInputRef} accept="image/*" onChange={handleImageSelect} className="hidden" />
-                  {imagePreview ? (
-                    <div className="relative">
-                      <img src={imagePreview} alt="미리보기" className="w-full h-32 object-cover rounded-lg border border-geo-border" />
-                      <button type="button" onClick={clearSelectedImage} className="absolute top-1 right-1 w-6 h-6 bg-black/60 rounded-full flex items-center justify-center text-white hover:bg-black/80 transition-all">
-                        <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12" /></svg>
-                      </button>
-                    </div>
-                  ) : (
-                    <button type="button" onClick={() => fileInputRef.current?.click()} className="w-full h-24 border-2 border-dashed border-geo-border rounded-lg flex flex-col items-center justify-center text-txt-muted hover:border-status-purple/50 hover:text-txt-secondary transition-all">
-                      <svg className="w-6 h-6 mb-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                      <span className="text-xs">클릭하여 이미지 선택</span>
-                    </button>
-                  )}
-                </div>
               </div>
               <div className="flex gap-2 mt-6">
-                <button type="button" onClick={() => { setShowModal(false); clearSelectedImage(); }} disabled={createMutation.isPending} className="flex-1 px-4 py-2.5 border border-geo-border rounded-lg text-txt-secondary hover:text-txt-primary hover:border-geo-border-hover transition-all">취소</button>
+                <button type="button" onClick={() => setShowModal(false)} disabled={createMutation.isPending} className="flex-1 px-4 py-2.5 border border-geo-border rounded-lg text-txt-secondary hover:text-txt-primary hover:border-geo-border-hover transition-all">취소</button>
                 <button type="submit" disabled={createMutation.isPending} className="flex-1 px-4 py-2.5 bg-status-purple text-white rounded-lg font-medium hover:bg-status-purple/80 disabled:opacity-50 transition-all">{createMutation.isPending ? '생성 중...' : '생성'}</button>
               </div>
             </form>
