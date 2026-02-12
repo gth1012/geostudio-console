@@ -30,7 +30,8 @@ export default function AssetsPage() {
       setSeriesThumbnail(null);
       try {
         const res = await api.get(`/series/${selectedAsset.series_id}`);
-        const series = res.data;
+        // API 응답: { data: series }
+        const series = res.data?.data;
         if (series?.thumbnail_image) {
           // base64 이미지를 data URL로 변환
           setSeriesThumbnail(`data:image/jpeg;base64,${series.thumbnail_image}`);
