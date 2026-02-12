@@ -248,7 +248,7 @@ export default function SeriesPage() {
 
       {showModal && (
         <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center">
-          <div className="bg-geo-card border border-geo-border rounded-xl w-full max-w-md p-6 mx-4">
+          <div className="bg-geo-card border border-geo-border rounded-xl w-full max-w-md p-6 mx-4 m-auto">
             <div className="bg-geo-main px-6 py-3 border-b border-geo-border rounded-t-xl flex-shrink-0">
               <h2 className="text-lg font-semibold text-txt-primary">새 시리즈 생성</h2>
             </div>
