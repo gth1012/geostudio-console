@@ -69,6 +69,12 @@ export default function BatchDetailPage() {
     onError: (err: any) => { toast.show(err.response?.data?.message || '잠금 해제 실패', 'error'); },
   });
 
+  const printMutation = useMutation({
+    mutationFn: (batchId: string) => api.post(`/api/print/batch/${batchId}`),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['batch', id] }); toast.show('Print 실행이 시작되었습니다', 'success'); },
+    onError: (err: any) => { toast.show(err.response?.data?.message || 'Print 실행 실패', 'error'); },
+  });
+
   const { data: anomalyStatus } = useQuery({
     queryKey: ['anomaly', id],
     queryFn: () => api.get(`/geocam/anomaly-status/${id}`).then((res) => res.data),
@@ -147,6 +153,8 @@ export default function BatchDetailPage() {
             <button onClick={() => { setModalPos({ x: 0, y: 0 }); setShowAssetModal(true); }} className="px-4 py-2 bg-status-purple text-white rounded-lg hover:bg-status-purple/80 text-sm font-medium transition-all">+ 자산 생성</button>
           ) : batch.status === 'DRAFT' ? (
             <span className="px-4 py-2 bg-geo-card text-txt-muted border border-geo-border rounded-lg text-sm font-medium cursor-not-allowed">자산 생성 완료</span>
+          ) : batch.status === 'LOCKED' ? (
+            <button onClick={() => printMutation.mutate(batch.batch_id)} disabled={printMutation.isPending} className="px-4 py-2 bg-status-purple text-white rounded-lg hover:bg-status-purple/80 disabled:opacity-50 transition-all">{printMutation.isPending ? 'Print 중...' : 'Print 실행'}</button>
           ) : (
             <span className="px-4 py-2 bg-status-green text-white rounded-lg text-sm font-medium">확정</span>
           )}
