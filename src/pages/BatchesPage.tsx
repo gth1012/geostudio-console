@@ -1,4 +1,4 @@
-﻿import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../services/api';
@@ -37,11 +37,11 @@ export default function BatchesPage() {
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => api.delete(`/batches/${id}`),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['batches'] }); setDeleteTarget(null); toast.show('?먯궛????젣?섏뿀?듬땲??, 'success'); },
-    onError: (err: any) => { toast.show(err.response?.data?.message || '?먯궛 ??젣 ?ㅽ뙣', 'error'); },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['batches'] }); setDeleteTarget(null); toast.show('자산이 삭제되었습니다', 'success'); },
+    onError: (err: any) => { toast.show(err.response?.data?.message || '자산 삭제 실패', 'error'); },
   });
 
-  // 泥댄겕諛뺤뒪 ?좏깮 ?몃뱾??
+  // 체크박스 선택 핸들러
   const handleSelectAll = (checked: boolean) => {
     if (checked && batches) {
       const draftIds = batches.filter((b: any) => b.status === 'DRAFT').map((b: any) => b.batch_id);
@@ -60,7 +60,7 @@ export default function BatchesPage() {
     });
   };
 
-  // ?좏깮 ??젣
+  // 선택 삭제
   const handleBulkDelete = async () => {
     if (selectedIds.size === 0) return;
     setIsBulkDeleting(true);
@@ -70,9 +70,9 @@ export default function BatchesPage() {
       queryClient.invalidateQueries({ queryKey: ['batches'] });
       setSelectedIds(new Set());
       setShowBulkDeleteModal(false);
-      toast.show(`${ids.length}媛??먯궛????젣?섏뿀?듬땲??, 'success');
+      toast.show(`${ids.length}개 자산이 삭제되었습니다`, 'success');
     } catch (err: any) {
-      toast.show(err.response?.data?.message || '?쇰? ?먯궛 ??젣 ?ㅽ뙣', 'error');
+      toast.show(err.response?.data?.message || '일부 자산 삭제 실패', 'error');
     } finally {
       setIsBulkDeleting(false);
     }
@@ -93,9 +93,9 @@ export default function BatchesPage() {
       setShowModal(false);
       setSeriesId('');
       setRows([]);
-      toast.show(`${rows.length}媛??먯궛???앹꽦?섏뿀?듬땲??, 'success');
+      toast.show(`${rows.length}개 자산이 생성되었습니다`, 'success');
     } catch (err: any) {
-      toast.show(err.response?.data?.message || '?먯궛 ?앹꽦 ?ㅽ뙣', 'error');
+      toast.show(err.response?.data?.message || '자산 생성 실패', 'error');
     } finally {
       setIsCreating(false);
     }
@@ -115,7 +115,7 @@ export default function BatchesPage() {
         }
       }
       if (duplicateCount > 0) {
-        toast.show(`以묐났 ?대?吏 ${duplicateCount}媛??쒖쇅??, 'error');
+        toast.show(`중복 이미지 ${duplicateCount}개 제외됨`, 'error');
       }
       return [...prev, ...unique];
     });
@@ -145,7 +145,7 @@ export default function BatchesPage() {
     setDragOver(false);
     const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
     if (files.length === 0) {
-      toast.show('?대?吏 ?뚯씪留?異붽??????덉뒿?덈떎', 'error');
+      toast.show('이미지 파일만 추가할 수 있습니다', 'error');
       return;
     }
     processFiles(files);
@@ -183,22 +183,22 @@ export default function BatchesPage() {
   };
 
   const getStatusLabel = (status: string) => {
-    const map: Record<string, string> = { DRAFT: '?꾩떆 ???, IN_PROGRESS: '吏꾪뻾 以?, COMPLETED: '?꾨즺', SHIPPED: '異쒓퀬 ?꾨즺', FAILED: '?ㅽ뙣', LOCKED: '?뺤젙' };
+    const map: Record<string, string> = { DRAFT: '임시 저장', IN_PROGRESS: '진행 중', COMPLETED: '완료', SHIPPED: '출고 완료', FAILED: '실패', LOCKED: '확정' };
     return map[status] || status;
   };
 
   return (
     <div className="animate-fade-in">
       <div className="flex flex-col items-center gap-3 mb-6">
-        <button onClick={() => { setModalPos({ x: 0, y: 0 }); setShowModal(true); }} className="px-4 py-2 bg-status-purple text-white rounded-lg hover:bg-status-purple/80 text-sm font-medium transition-all">?쒕━利??좏깮</button>
+        <button onClick={() => { setModalPos({ x: 0, y: 0 }); setShowModal(true); }} className="px-4 py-2 bg-status-purple text-white rounded-lg hover:bg-status-purple/80 text-sm font-medium transition-all">시리즈 선택</button>
         {selectedIds.size > 0 && (
           <button onClick={() => setShowBulkDeleteModal(true)} className="px-4 py-2 bg-status-red text-white rounded-lg hover:bg-status-red/80 text-sm font-medium transition-all">
-            ?좏깮 ??젣 ({selectedIds.size}媛?
+            선택 삭제 ({selectedIds.size}개)
           </button>
         )}
       </div>
 
-      {isLoading ? <p className="text-txt-secondary">濡쒕뵫 以?.</p> : (
+      {isLoading ? <p className="text-txt-secondary">로딩 중..</p> : (
         <div className="bg-geo-card border border-geo-border rounded-xl overflow-visible">
           <table className="w-full table-fixed">
             <thead>
@@ -207,11 +207,11 @@ export default function BatchesPage() {
                   <input type="checkbox" checked={allDraftSelected && draftBatches.length > 0} onChange={(e) => handleSelectAll(e.target.checked)} className="w-4 h-4 rounded border-geo-border text-status-purple focus:ring-status-purple/40 bg-geo-main cursor-pointer" />
                 </th>
                 <th className="w-[10%] px-4 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">ID</th>
-                <th className="w-[18%] px-4 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">?쒕━利?/th>
-                <th className="w-[10%] px-4 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">諛쒗뻾??/th>
-                <th className="w-[22%] px-4 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">?곹깭</th>
-                <th className="w-[15%] px-4 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">?앹꽦??/th>
-                <th className="w-[20%] px-4 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">?≪뀡</th>
+                <th className="w-[18%] px-4 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">시리즈</th>
+                <th className="w-[10%] px-4 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">발행량</th>
+                <th className="w-[22%] px-4 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">상태</th>
+                <th className="w-[15%] px-4 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">생성일</th>
+                <th className="w-[20%] px-4 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">액션</th>
               </tr>
             </thead>
             <tbody>
@@ -227,7 +227,7 @@ export default function BatchesPage() {
                     <div className="flex justify-center items-center gap-1 flex-wrap">
                       <span className={`inline-block w-16 px-1 py-1 rounded text-xs font-medium text-center ${getStatusBadge(b.status)}`}>{getStatusLabel(b.status)}</span>
                       <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-medium ${b.batch_reference_status === 'LOCKED' ? 'bg-status-green-dim text-status-green' : 'bg-status-yellow-dim text-status-yellow'}`}>
-                        {b.batch_reference_status === 'LOCKED' ? '湲곗?:?뺤젙' : '湲곗?:誘명솗??}
+                        {b.batch_reference_status === 'LOCKED' ? '기준:확정' : '기준:미확정'}
                       </span>
                       {b.batch_locked_until && new Date(b.batch_locked_until) > new Date() && (
                         <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-bold bg-status-red/20 text-status-red border border-status-red/30 animate-pulse">LOCKED</span>
@@ -238,60 +238,60 @@ export default function BatchesPage() {
                   <td className="px-3 py-3 text-center">
                     <div className="flex justify-center gap-1">
                       <button onClick={() => navigate(`/batches/${b.batch_id}`)}
-                        className="w-12 px-1 py-1 text-xs bg-status-purple text-white rounded hover:bg-status-purple/80 transition-all">?앹꽦</button>
+                        className="w-12 px-1 py-1 text-xs bg-status-purple text-white rounded hover:bg-status-purple/80 transition-all">생성</button>
                       <button disabled={b.status !== 'DRAFT'} onClick={() => setDeleteTarget({ batch_id: b.batch_id, name: b.display_id || b.batch_id })}
-                        className="w-12 px-1 py-1 text-xs bg-status-red-dim text-status-red rounded hover:bg-status-red/20 disabled:opacity-30 disabled:cursor-not-allowed transition-all">??젣</button>
+                        className="w-12 px-1 py-1 text-xs bg-status-red-dim text-status-red rounded hover:bg-status-red/20 disabled:opacity-30 disabled:cursor-not-allowed transition-all">삭제</button>
                     </div>
                   </td>
                 </tr>
               ))}
-              {!batches?.length && <tr><td colSpan={7} className="px-6 py-8 text-center text-txt-muted">?쒕━利덇? ?놁뒿?덈떎</td></tr>}
+              {!batches?.length && <tr><td colSpan={7} className="px-6 py-8 text-center text-txt-muted">시리즈가 없습니다</td></tr>}
             </tbody>
           </table>
         </div>
       )}
 
-      {/* ??젣 ?뺤씤 紐⑤떖 */}
+      {/* 삭제 확인 모달 */}
       {deleteTarget && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center">
           <div className="bg-geo-card border border-geo-border rounded-xl w-full max-w-sm p-6">
-            <h3 className="text-base font-semibold text-txt-primary mb-2">?먯궛 ??젣</h3>
-            <p className="text-sm text-txt-secondary mb-6">"{deleteTarget.name}" ?먯궛????젣?섏떆寃좎뒿?덇퉴?<br />???묒뾽? ?섎룎由????놁뒿?덈떎.</p>
+            <h3 className="text-base font-semibold text-txt-primary mb-2">자산 삭제</h3>
+            <p className="text-sm text-txt-secondary mb-6">"{deleteTarget.name}" 자산을 삭제하시겠습니까?<br />이 작업은 되돌릴 수 없습니다.</p>
             <div className="flex justify-end gap-3">
-              <button onClick={() => setDeleteTarget(null)} className="px-4 py-2 text-sm text-txt-secondary border border-geo-border rounded-lg hover:border-geo-border-hover transition-all">痍⑥냼</button>
+              <button onClick={() => setDeleteTarget(null)} className="px-4 py-2 text-sm text-txt-secondary border border-geo-border rounded-lg hover:border-geo-border-hover transition-all">취소</button>
               <button onClick={() => deleteMutation.mutate(deleteTarget.batch_id)} disabled={deleteMutation.isPending}
                 className="px-4 py-2 text-sm font-medium bg-status-red text-white rounded-lg hover:bg-status-red/80 transition-all disabled:opacity-50">
-                {deleteMutation.isPending ? '??젣 以?.' : '??젣'}
+                {deleteMutation.isPending ? '삭제 중..' : '삭제'}
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* ?좏깮 ??젣 ?뺤씤 紐⑤떖 */}
+      {/* 선택 삭제 확인 모달 */}
       {showBulkDeleteModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center">
           <div className="bg-geo-card border border-geo-border rounded-xl w-full max-w-sm p-6">
-            <h3 className="text-base font-semibold text-txt-primary mb-2">?좏깮 ??젣</h3>
-            <p className="text-sm text-txt-secondary mb-6">?좏깮??{selectedIds.size}媛??먯궛????젣?섏떆寃좎뒿?덇퉴?<br />???묒뾽? ?섎룎由????놁뒿?덈떎.</p>
+            <h3 className="text-base font-semibold text-txt-primary mb-2">선택 삭제</h3>
+            <p className="text-sm text-txt-secondary mb-6">선택한 {selectedIds.size}개 자산을 삭제하시겠습니까?<br />이 작업은 되돌릴 수 없습니다.</p>
             <div className="flex justify-end gap-3">
-              <button onClick={() => setShowBulkDeleteModal(false)} className="px-4 py-2 text-sm text-txt-secondary border border-geo-border rounded-lg hover:border-geo-border-hover transition-all">痍⑥냼</button>
+              <button onClick={() => setShowBulkDeleteModal(false)} className="px-4 py-2 text-sm text-txt-secondary border border-geo-border rounded-lg hover:border-geo-border-hover transition-all">취소</button>
               <button onClick={handleBulkDelete} disabled={isBulkDeleting}
                 className="px-4 py-2 text-sm font-medium bg-status-red text-white rounded-lg hover:bg-status-red/80 transition-all disabled:opacity-50">
-                {isBulkDeleting ? '??젣 以?.' : '??젣'}
+                {isBulkDeleting ? '삭제 중..' : '삭제'}
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* ??諛곗튂 ?앹꽦 紐⑤떖 */}
+      {/* 새 배치 생성 모달 */}
       {showModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50" onMouseMove={handleMouseMove} onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp}>
           <div className="absolute top-4 left-4 bg-geo-card border border-geo-border rounded-xl w-full max-w-md flex flex-col cursor-move select-none" style={{ maxHeight: '85vh', transform: `translate(${modalPos.x}px, ${modalPos.y}px)` }} onMouseDown={handleMouseDown}>
             <div className="bg-geo-main px-4 py-3 border-b border-geo-border rounded-t-xl flex-shrink-0 flex justify-center">
               <select value={seriesId} onChange={(e) => setSeriesId(e.target.value)} className="px-4 py-2 bg-geo-card border border-geo-border rounded-lg text-txt-primary focus:ring-2 focus:ring-status-purple/40 outline-none text-sm font-medium" required>
-                <option value="">?쒕━利덈? ?좏깮?섏꽭??/option>
+                <option value="">시리즈를 선택하세요</option>
                 {series?.map((s: any) => <option key={s.series_id} value={s.series_id}>{s.name}</option>)}
               </select>
             </div>
@@ -299,17 +299,17 @@ export default function BatchesPage() {
               <div className="space-y-4">
                 <div>
                   <button type="button" disabled={!seriesId} onClick={() => { setImgModalPos({ x: 0, y: 0 }); setShowImageModal(true); }} className="w-full px-4 py-2.5 bg-status-purple/20 text-status-purple rounded-lg font-medium hover:bg-status-purple/30 transition-all text-sm disabled:opacity-30 disabled:cursor-not-allowed">
-                    + ?붿옄???대?吏 異붽?
+                    + 디자인 이미지 추가
                   </button>
                 </div>
                 {rows.length > 0 && (
                   <div className="space-y-3">
-                    <label className="block text-xs text-txt-secondary">?먯궛 紐⑸줉 ({rows.length}媛?</label>
+                    <label className="block text-xs text-txt-secondary">자산 목록 ({rows.length}개)</label>
                     {rows.map((row, i) => (
                       <div key={i} className="flex items-center gap-3 p-2 bg-geo-main rounded-lg border border-geo-border">
                         <span className="text-xs text-txt-muted font-mono w-6 text-center flex-shrink-0">{i + 1}</span>
                         <img src={row.image} alt={`batch-${i}`} className="w-12 h-12 object-cover rounded-lg border border-geo-border flex-shrink-0" />
-                        <input type="number" placeholder="諛쒗뻾?? value={row.supply} onChange={(e) => handleSupplyChange(i, e.target.value)} className="flex-1 px-3 py-2 bg-geo-card border border-geo-border rounded-lg text-txt-primary placeholder-txt-muted text-sm focus:ring-2 focus:ring-status-purple/40 outline-none" min="1" required />
+                        <input type="number" placeholder="발행량" value={row.supply} onChange={(e) => handleSupplyChange(i, e.target.value)} className="flex-1 px-3 py-2 bg-geo-card border border-geo-border rounded-lg text-txt-primary placeholder-txt-muted text-sm focus:ring-2 focus:ring-status-purple/40 outline-none" min="1" required />
                         <button type="button" onClick={() => handleRemoveRow(i)} className="w-8 h-8 bg-status-red/20 text-status-red rounded-lg flex items-center justify-center hover:bg-status-red/30 transition-all flex-shrink-0">X</button>
                       </div>
                     ))}
@@ -317,9 +317,9 @@ export default function BatchesPage() {
                 )}
               </div>
               <div className="flex gap-2 mt-6">
-                <button type="button" onClick={() => { setShowModal(false); setSeriesId(''); setRows([]); }} className="flex-1 px-4 py-2.5 border border-geo-border rounded-lg text-txt-secondary hover:text-txt-primary transition-all">痍⑥냼</button>
+                <button type="button" onClick={() => { setShowModal(false); setSeriesId(''); setRows([]); }} className="flex-1 px-4 py-2.5 border border-geo-border rounded-lg text-txt-secondary hover:text-txt-primary transition-all">취소</button>
                 <button type="submit" disabled={isCreating || rows.length === 0} className="flex-1 px-4 py-2.5 bg-status-purple text-white rounded-lg font-medium hover:bg-status-purple/80 transition-all disabled:opacity-50">
-                  {isCreating ? '?앹꽦 以?..' : `?앹꽦 (${rows.length}媛??대?吏)`}
+                  {isCreating ? '생성 중...' : `생성 (${rows.length}개 이미지)`}
                 </button>
               </div>
             </form>
@@ -327,12 +327,12 @@ export default function BatchesPage() {
         </div>
       )}
 
-      {/* ?대?吏 異붽? 紐⑤떖 */}
+      {/* 이미지 추가 모달 */}
       {showImageModal && (
         <div className="fixed inset-0 z-[60]" onMouseMove={handleImgMouseMove} onMouseUp={handleImgMouseUp} onMouseLeave={handleImgMouseUp}>
           <div className="absolute top-4 left-[460px] bg-geo-card border border-geo-border rounded-xl w-full max-w-lg cursor-move select-none" style={{ transform: `translate(${imgModalPos.x}px, ${imgModalPos.y}px)` }} onMouseDown={handleImgMouseDown}>
             <div className="bg-geo-main px-6 py-3 border-b border-geo-border rounded-t-xl flex items-center justify-between">
-              <h2 className="text-base font-semibold text-txt-primary">?붿옄???대?吏 異붽?</h2>
+              <h2 className="text-base font-semibold text-txt-primary">디자인 이미지 추가</h2>
               <button onClick={() => setShowImageModal(false)} className="w-7 h-7 flex items-center justify-center rounded-lg text-txt-muted hover:text-txt-primary hover:bg-geo-card-hover transition-all">
                 <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12" /></svg>
               </button>
@@ -347,11 +347,11 @@ export default function BatchesPage() {
               >
                 <input ref={fileInputRef} type="file" accept="image/*" multiple onChange={handleFilesChange} className="hidden" />
                 <span className="text-xl">&#128193;</span>
-                <span className="text-sm text-txt-primary font-medium">?대?吏 ?낅줈??/span>
+                <span className="text-sm text-txt-primary font-medium">이미지 업로드</span>
               </div>
               {rows.length > 0 && (
                 <div>
-                  <label className="block text-xs text-txt-secondary mb-2">異붽????대?吏 ({rows.length}媛?</label>
+                  <label className="block text-xs text-txt-secondary mb-2">추가된 이미지 ({rows.length}개)</label>
                   <div className="grid grid-cols-5 gap-2 max-h-40 overflow-y-auto">
                     {rows.map((row, i) => (
                       <div key={i} className="relative group">
@@ -363,7 +363,7 @@ export default function BatchesPage() {
                 </div>
               )}
               <button onClick={() => setShowImageModal(false)} className="w-full px-4 py-2.5 bg-status-purple text-white rounded-lg font-medium hover:bg-status-purple/80 transition-all text-sm">
-                ?뺤씤 ({rows.length}媛??대?吏)
+                확인 ({rows.length}개 이미지)
               </button>
             </div>
           </div>
@@ -372,4 +372,3 @@ export default function BatchesPage() {
     </div>
   );
 }
-
