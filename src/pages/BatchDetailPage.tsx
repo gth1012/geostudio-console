@@ -69,8 +69,14 @@ export default function BatchDetailPage() {
     onError: (err: any) => { toast.show(err.response?.data?.message || '잠금 해제 실패', 'error'); },
   });
 
+  const lockMutation = useMutation({
+    mutationFn: (batchId: string) => api.patch(`/api/studio/batches/${batchId}/lock`),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['batch', id] }); toast.show('배치가 확정되었습니다', 'success'); },
+    onError: (err: any) => { toast.show(err.response?.data?.message || '배치 확정 실패', 'error'); },
+  });
+
   const printMutation = useMutation({
-    mutationFn: (batchId: string) => api.post(`/api/print/batch/${batchId}`),
+    mutationFn: (batchId: string) => api.post(`/api/studio/print/batch/${batchId}`),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['batch', id] }); toast.show('Print 실행이 시작되었습니다', 'success'); },
     onError: (err: any) => { toast.show(err.response?.data?.message || 'Print 실행 실패', 'error'); },
   });
@@ -152,7 +158,10 @@ export default function BatchDetailPage() {
           {batch.status === 'DRAFT' && (batch.items_total || 0) < (batch.supply || 0) ? (
             <button onClick={() => { setModalPos({ x: 0, y: 0 }); setShowAssetModal(true); }} className="px-4 py-2 bg-status-purple text-white rounded-lg hover:bg-status-purple/80 text-sm font-medium transition-all">+ 자산 생성</button>
           ) : batch.status === 'DRAFT' ? (
-            <span className="px-4 py-2 bg-geo-card text-txt-muted border border-geo-border rounded-lg text-sm font-medium cursor-not-allowed">자산 생성 완료</span>
+            <>
+              <span className="px-4 py-2 bg-geo-card text-txt-muted border border-geo-border rounded-lg text-sm font-medium cursor-not-allowed">자산 생성 완료</span>
+              <button onClick={() => lockMutation.mutate(batch.batch_id)} disabled={lockMutation.isPending} className="px-4 py-2 bg-status-green text-white rounded-lg hover:bg-status-green/80 disabled:opacity-50 text-sm font-medium transition-all">{lockMutation.isPending ? 'LOCK 중...' : 'LOCK 확정'}</button>
+            </>
           ) : batch.status === 'LOCKED' ? (
             <button onClick={() => printMutation.mutate(batch.batch_id)} disabled={printMutation.isPending} className="px-4 py-2 bg-status-purple text-white rounded-lg hover:bg-status-purple/80 disabled:opacity-50 transition-all">{printMutation.isPending ? 'Print 중...' : 'Print 실행'}</button>
           ) : (
