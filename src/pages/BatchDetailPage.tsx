@@ -76,7 +76,7 @@ export default function BatchDetailPage() {
   });
 
   const printMutation = useMutation({
-    mutationFn: (batchId: string) => api.post(`/api/studio/print/batch/${batchId}`),
+    mutationFn: (batchId: string) => api.post(`/studio/print/batch/${batchId}`),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['batch', id] }); toast.show('Print 실행이 시작되었습니다', 'success'); },
     onError: (err: any) => { toast.show(err.response?.data?.message || 'Print 실행 실패', 'error'); },
   });
