@@ -49,10 +49,10 @@ export default function CreateShipmentModal({ onClose }: CreateShipmentModalProp
     queryFn: () => api.get('/series').then(res => res.data.data as Series[]),
   });
 
-  // 선택한 시리즈의 LOCKED 자산 목록
+  // 선택한 시리즈의 PRINTED 자산 목록 (출고 생성 시 자동 LOCK)
   const { data: assets, isLoading: assetsLoading } = useQuery({
-    queryKey: ['assets-locked', selectedSeriesId],
-    queryFn: () => api.get(`/assets?seriesId=${selectedSeriesId}&status=LOCKED`).then(res => res.data.data as Asset[]),
+    queryKey: ['assets-printed', selectedSeriesId],
+    queryFn: () => api.get(`/assets?seriesId=${selectedSeriesId}&status=PRINTED`).then(res => res.data.data as Asset[]),
     enabled: !!selectedSeriesId && step === 'assets',
   });
 
@@ -184,7 +184,7 @@ export default function CreateShipmentModal({ onClose }: CreateShipmentModalProp
               {assetsLoading ? (
                 <p className="text-sm text-txt-muted text-center py-4">로딩 중...</p>
               ) : assets?.length === 0 ? (
-                <p className="text-sm text-txt-muted text-center py-4">LOCKED 상태의 자산이 없습니다</p>
+                <p className="text-sm text-txt-muted text-center py-4">PRINTED 상태의 자산이 없습니다</p>
               ) : (
                 <>
                   <div className="flex items-center justify-between mb-3">
