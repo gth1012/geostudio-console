@@ -59,6 +59,7 @@ export default function BatchDetailPage() {
       setShowAssetModal(false);
       setSelectedBatches(new Set());
       toast.show('자산 생성이 시작되었습니다', 'success');
+      setTimeout(() => { unlockMutation.mutate(batch.batch_id); }, 1000);
     },
     onError: (err: any) => { toast.show(err.response?.data?.message || '자산 생성 실패', 'error'); },
   });
