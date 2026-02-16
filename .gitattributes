@@ -1,0 +1,4 @@
+# Prevent auto-merge conflicts on config files
+tsconfig.json merge=ours
+tsconfig.node.json merge=ours
+vite.config.ts merge=ours

@@ -107,7 +107,7 @@ function ResetModal({ onClose }: { onClose: () => void }) {
             <div className="bg-geo-deep rounded-lg p-3 text-xs font-mono text-txt-secondary mb-4">
               <div>시리즈: {result.truncated_series}건 삭제</div>
               <div>배치: {result.truncated_batches}건 삭제</div>
-              <div>에셋: {result.truncated_assets}건 삭제</div>
+              <div>자산: {result.truncated_assets}건 삭제</div>
             </div>
             <button onClick={onClose} className="w-full py-2 text-sm font-medium bg-geo-card border border-geo-border rounded-lg text-txt-primary hover:border-geo-border-hover transition-all">닫기</button>
           </div>
@@ -116,7 +116,7 @@ function ResetModal({ onClose }: { onClose: () => void }) {
             {/* Step 0: 비밀번호 */}
             {step === 0 && (
               <div>
-                <p className="text-sm text-txt-secondary mb-4">시리즈, 배치, 에셋 데이터가 모두 삭제됩니다.<br />감사 로그는 보존됩니다.</p>
+                <p className="text-sm text-txt-secondary mb-4">시리즈, 배치, 자산 데이터가 모두 삭제됩니다.<br />감사 로그는 보존됩니다.</p>
                 <label className="block text-xs text-txt-muted mb-1.5">관리자 비밀번호</label>
                 <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="ADMIN_RESET_PASSWORD"
                   className="w-full px-3 py-2 bg-geo-deep border border-geo-border rounded-lg text-sm text-txt-primary placeholder-txt-muted focus:outline-none focus:border-status-purple mb-4" />
@@ -147,7 +147,7 @@ function ResetModal({ onClose }: { onClose: () => void }) {
               <div>
                 <div className="bg-status-red/10 border border-status-red/20 rounded-lg p-4 mb-4">
                   <p className="text-sm text-status-red font-medium">이 작업은 되돌릴 수 없습니다.</p>
-                  <p className="text-xs text-status-red/70 mt-1">모든 시리즈, 배치, 에셋 데이터가 영구 삭제됩니다.</p>
+                  <p className="text-xs text-status-red/70 mt-1">모든 시리즈, 배치, 자산 데이터가 영구 삭제됩니다.</p>
                 </div>
                 {error && <p className="text-sm text-status-red mb-3">{error}</p>}
                 <div className="flex justify-end gap-3">
@@ -246,7 +246,7 @@ export default function SystemAdminPage() {
   const tabs: { key: Tab; label: string }[] = [
     { key: 'series', label: '시리즈' },
     { key: 'batches', label: '배치' },
-    { key: 'assets', label: '에셋' },
+    { key: 'assets', label: '자산' },
   ];
 
   const isLoading = (tab === 'series' && seriesQuery.isLoading) || (tab === 'batches' && batchesQuery.isLoading) || (tab === 'assets' && assetsQuery.isLoading);
@@ -330,10 +330,10 @@ export default function SystemAdminPage() {
                         <button onClick={() => restoreSeries.mutate(s.series_id)}
                           className="px-2.5 py-1 text-[11px] font-medium text-status-green border border-status-green/30 rounded hover:bg-status-green/10 transition-all">복구</button>
                       ) : (
-                        <button onClick={() => withConfirm('시리즈 삭제', `"${s.name}" 시리즈와 하위 배치/에셋을 모두 삭제합니다.`, () => softDeleteSeries.mutate(s.series_id), true)}
+                        <button onClick={() => withConfirm('시리즈 삭제', `"${s.name}" 시리즈와 하위 배치/자산을 모두 삭제합니다.`, () => softDeleteSeries.mutate(s.series_id), true)}
                           className="px-2.5 py-1 text-[11px] font-medium text-status-yellow border border-status-yellow/30 rounded hover:bg-status-yellow/10 transition-all">삭제</button>
                       )}
-                      <button onClick={() => withConfirm('영구 삭제 (Purge)', `"${s.name}" 시리즈를 영구 삭제합니다.\nACTIVATED 에셋이 있으면 실패합니다.`, () => purgeSeries.mutate(s.series_id), true)}
+                      <button onClick={() => withConfirm('영구 삭제 (Purge)', `"${s.name}" 시리즈를 영구 삭제합니다.\nACTIVATED 자산이 있으면 실패합니다.`, () => purgeSeries.mutate(s.series_id), true)}
                         className="px-2.5 py-1 text-[11px] font-medium text-status-red border border-status-red/30 rounded hover:bg-status-red/10 transition-all">Purge</button>
                     </div>
                   </td>
@@ -375,10 +375,10 @@ export default function SystemAdminPage() {
                         <button onClick={() => restoreBatch.mutate(b.batch_id)}
                           className="px-2.5 py-1 text-[11px] font-medium text-status-green border border-status-green/30 rounded hover:bg-status-green/10 transition-all">복구</button>
                       ) : (
-                        <button onClick={() => withConfirm('배치 삭제', `"${b.name}" 배치와 하위 에셋을 모두 삭제합니다.`, () => softDeleteBatch.mutate(b.batch_id), true)}
+                        <button onClick={() => withConfirm('배치 삭제', `"${b.name}" 배치와 하위 자산을 모두 삭제합니다.`, () => softDeleteBatch.mutate(b.batch_id), true)}
                           className="px-2.5 py-1 text-[11px] font-medium text-status-yellow border border-status-yellow/30 rounded hover:bg-status-yellow/10 transition-all">삭제</button>
                       )}
-                      <button onClick={() => withConfirm('영구 삭제 (Purge)', `"${b.name}" 배치를 영구 삭제합니다.\nACTIVATED 에셋이 있으면 실패합니다.`, () => purgeBatch.mutate(b.batch_id), true)}
+                      <button onClick={() => withConfirm('영구 삭제 (Purge)', `"${b.name}" 배치를 영구 삭제합니다.\nACTIVATED 자산이 있으면 실패합니다.`, () => purgeBatch.mutate(b.batch_id), true)}
                         className="px-2.5 py-1 text-[11px] font-medium text-status-red border border-status-red/30 rounded hover:bg-status-red/10 transition-all">Purge</button>
                     </div>
                   </td>
@@ -418,10 +418,10 @@ export default function SystemAdminPage() {
                         <button onClick={() => restoreAsset.mutate(a.dina_id)}
                           className="px-2.5 py-1 text-[11px] font-medium text-status-green border border-status-green/30 rounded hover:bg-status-green/10 transition-all">복구</button>
                       ) : (
-                        <button onClick={() => withConfirm('에셋 삭제', `${a.dina_id} 에셋을 삭제합니다.`, () => softDeleteAsset.mutate(a.dina_id), true)}
+                        <button onClick={() => withConfirm('자산 삭제', `${a.dina_id} 자산을 삭제합니다.`, () => softDeleteAsset.mutate(a.dina_id), true)}
                           className="px-2.5 py-1 text-[11px] font-medium text-status-yellow border border-status-yellow/30 rounded hover:bg-status-yellow/10 transition-all">삭제</button>
                       )}
-                      <button onClick={() => withConfirm('영구 삭제 (Purge)', `${a.dina_id} 에셋을 영구 삭제합니다.\nACTIVATED 상태이면 실패합니다.`, () => purgeAsset.mutate(a.dina_id), true)}
+                      <button onClick={() => withConfirm('영구 삭제 (Purge)', `${a.dina_id} 자산을 영구 삭제합니다.\nACTIVATED 상태이면 실패합니다.`, () => purgeAsset.mutate(a.dina_id), true)}
                         className="px-2.5 py-1 text-[11px] font-medium text-status-red border border-status-red/30 rounded hover:bg-status-red/10 transition-all">Purge</button>
                     </div>
                   </td>

@@ -37,8 +37,8 @@ export default function BatchesPage() {
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => api.delete(`/batches/${id}`),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['batches'] }); setDeleteTarget(null); toast.show('배치가 삭제되었습니다', 'success'); },
-    onError: (err: any) => { toast.show(err.response?.data?.message || '배치 삭제 실패', 'error'); },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['batches'] }); setDeleteTarget(null); toast.show('자산이 삭제되었습니다', 'success'); },
+    onError: (err: any) => { toast.show(err.response?.data?.message || '자산 삭제 실패', 'error'); },
   });
 
   // 체크박스 선택 핸들러
@@ -70,9 +70,9 @@ export default function BatchesPage() {
       queryClient.invalidateQueries({ queryKey: ['batches'] });
       setSelectedIds(new Set());
       setShowBulkDeleteModal(false);
-      toast.show(`${ids.length}개 배치가 삭제되었습니다`, 'success');
+      toast.show(`${ids.length}개 자산이 삭제되었습니다`, 'success');
     } catch (err: any) {
-      toast.show(err.response?.data?.message || '일부 배치 삭제 실패', 'error');
+      toast.show(err.response?.data?.message || '일부 자산 삭제 실패', 'error');
     } finally {
       setIsBulkDeleting(false);
     }
@@ -93,9 +93,9 @@ export default function BatchesPage() {
       setShowModal(false);
       setSeriesId('');
       setRows([]);
-      toast.show(`${rows.length}개 배치가 생성되었습니다`, 'success');
+      toast.show(`${rows.length}개 자산이 생성되었습니다`, 'success');
     } catch (err: any) {
-      toast.show(err.response?.data?.message || '배치 생성 실패', 'error');
+      toast.show(err.response?.data?.message || '자산 생성 실패', 'error');
     } finally {
       setIsCreating(false);
     }
@@ -189,15 +189,13 @@ export default function BatchesPage() {
 
   return (
     <div className="animate-fade-in">
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          {selectedIds.size > 0 && (
-            <button onClick={() => setShowBulkDeleteModal(true)} className="px-4 py-2 bg-status-red text-white rounded-lg hover:bg-status-red/80 text-sm font-medium transition-all">
-              선택 삭제 ({selectedIds.size}개)
-            </button>
-          )}
-        </div>
+      <div className="flex flex-col items-center gap-3 mb-6">
         <button onClick={() => { setModalPos({ x: 0, y: 0 }); setShowModal(true); }} className="px-4 py-2 bg-status-purple text-white rounded-lg hover:bg-status-purple/80 text-sm font-medium transition-all">시리즈 선택</button>
+        {selectedIds.size > 0 && (
+          <button onClick={() => setShowBulkDeleteModal(true)} className="px-4 py-2 bg-status-red text-white rounded-lg hover:bg-status-red/80 text-sm font-medium transition-all">
+            선택 삭제 ({selectedIds.size}개)
+          </button>
+        )}
       </div>
 
       {isLoading ? <p className="text-txt-secondary">로딩 중..</p> : (
@@ -257,8 +255,8 @@ export default function BatchesPage() {
       {deleteTarget && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center">
           <div className="bg-geo-card border border-geo-border rounded-xl w-full max-w-sm p-6">
-            <h3 className="text-base font-semibold text-txt-primary mb-2">배치 삭제</h3>
-            <p className="text-sm text-txt-secondary mb-6">"{deleteTarget.name}" 배치를 삭제하시겠습니까?<br />이 작업은 되돌릴 수 없습니다.</p>
+            <h3 className="text-base font-semibold text-txt-primary mb-2">자산 삭제</h3>
+            <p className="text-sm text-txt-secondary mb-6">"{deleteTarget.name}" 자산을 삭제하시겠습니까?<br />이 작업은 되돌릴 수 없습니다.</p>
             <div className="flex justify-end gap-3">
               <button onClick={() => setDeleteTarget(null)} className="px-4 py-2 text-sm text-txt-secondary border border-geo-border rounded-lg hover:border-geo-border-hover transition-all">취소</button>
               <button onClick={() => deleteMutation.mutate(deleteTarget.batch_id)} disabled={deleteMutation.isPending}
@@ -275,7 +273,7 @@ export default function BatchesPage() {
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center">
           <div className="bg-geo-card border border-geo-border rounded-xl w-full max-w-sm p-6">
             <h3 className="text-base font-semibold text-txt-primary mb-2">선택 삭제</h3>
-            <p className="text-sm text-txt-secondary mb-6">선택한 {selectedIds.size}개 배치를 삭제하시겠습니까?<br />이 작업은 되돌릴 수 없습니다.</p>
+            <p className="text-sm text-txt-secondary mb-6">선택한 {selectedIds.size}개 자산을 삭제하시겠습니까?<br />이 작업은 되돌릴 수 없습니다.</p>
             <div className="flex justify-end gap-3">
               <button onClick={() => setShowBulkDeleteModal(false)} className="px-4 py-2 text-sm text-txt-secondary border border-geo-border rounded-lg hover:border-geo-border-hover transition-all">취소</button>
               <button onClick={handleBulkDelete} disabled={isBulkDeleting}
@@ -306,7 +304,7 @@ export default function BatchesPage() {
                 </div>
                 {rows.length > 0 && (
                   <div className="space-y-3">
-                    <label className="block text-xs text-txt-secondary">배치 목록 ({rows.length}개)</label>
+                    <label className="block text-xs text-txt-secondary">자산 목록 ({rows.length}개)</label>
                     {rows.map((row, i) => (
                       <div key={i} className="flex items-center gap-3 p-2 bg-geo-main rounded-lg border border-geo-border">
                         <span className="text-xs text-txt-muted font-mono w-6 text-center flex-shrink-0">{i + 1}</span>
@@ -321,7 +319,7 @@ export default function BatchesPage() {
               <div className="flex gap-2 mt-6">
                 <button type="button" onClick={() => { setShowModal(false); setSeriesId(''); setRows([]); }} className="flex-1 px-4 py-2.5 border border-geo-border rounded-lg text-txt-secondary hover:text-txt-primary transition-all">취소</button>
                 <button type="submit" disabled={isCreating || rows.length === 0} className="flex-1 px-4 py-2.5 bg-status-purple text-white rounded-lg font-medium hover:bg-status-purple/80 transition-all disabled:opacity-50">
-                  {isCreating ? '생성 중...' : `생성 (${rows.length}개)`}
+                  {isCreating ? '생성 중...' : `생성 (${rows.length}개 이미지)`}
                 </button>
               </div>
             </form>
@@ -365,7 +363,7 @@ export default function BatchesPage() {
                 </div>
               )}
               <button onClick={() => setShowImageModal(false)} className="w-full px-4 py-2.5 bg-status-purple text-white rounded-lg font-medium hover:bg-status-purple/80 transition-all text-sm">
-                확인 ({rows.length}개 선택됨)
+                확인 ({rows.length}개 이미지)
               </button>
             </div>
           </div>

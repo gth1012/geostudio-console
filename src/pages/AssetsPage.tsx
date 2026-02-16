@@ -12,39 +12,71 @@ export default function AssetsPage() {
   const [isDragging, setIsDragging] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedAsset, setSelectedAsset] = useState<any>(null);
-  const [batchImage, setBatchImage] = useState<string | null>(null);
+  const [assetImage, setAssetImage] = useState<string | null>(null);
   const [imageLoading, setImageLoading] = useState(false);
+  const [imageType, setImageType] = useState<'source' | 'rendered' | 'none'>('none');
   const dragOffset = useRef({ x: 0, y: 0 });
   const queryClient = useQueryClient();
   const toast = useToastStore();
 
-  // 선택된 에셋 변경 시 배치 이미지 로드
+  // 선택된 에셋 이미지 로드 (source 우선, 실패 시 rendered, 둘 다 실패 시 placeholder)
   useEffect(() => {
-    if (!selectedAsset?.batch_id) {
-      setBatchImage(null);
+    if (!selectedAsset?.asset_id) {
+      setAssetImage(null);
+      setImageType('none');
       return;
     }
 
-    const fetchBatchImage = async () => {
+    const fetchAssetImage = async () => {
       setImageLoading(true);
-      setBatchImage(null);
+      setAssetImage(null);
+      setImageType('none');
+
+      // 1. source 이미지 시도
       try {
-        const res = await api.get(`/batches/${selectedAsset.batch_id}`);
-        const batch = res.data?.data;
-        if (batch?.image) {
-          // base64 이미지 (이미 data URL 형식이면 그대로, 아니면 변환)
-          const img = batch.image.startsWith('data:') ? batch.image : `data:image/jpeg;base64,${batch.image}`;
-          setBatchImage(img);
-        }
-      } catch {
-        setBatchImage(null);
-      } finally {
+        const res = await api.get(`/assets/${selectedAsset.asset_id}/image-proxy?type=source`, {
+          responseType: 'arraybuffer',
+        });
+        const blob = new Blob([res.data], { type: res.headers['content-type'] || 'image/jpeg' });
+        const url = URL.createObjectURL(blob);
+        setAssetImage(url);
+        setImageType('source');
         setImageLoading(false);
+        return;
+      } catch {
+        // source 실패, rendered 시도
       }
+
+      // 2. rendered 이미지 시도
+      try {
+        const res = await api.get(`/assets/${selectedAsset.asset_id}/image-proxy?type=rendered`, {
+          responseType: 'arraybuffer',
+        });
+        const blob = new Blob([res.data], { type: res.headers['content-type'] || 'image/png' });
+        const url = URL.createObjectURL(blob);
+        setAssetImage(url);
+        setImageType('rendered');
+        setImageLoading(false);
+        return;
+      } catch {
+        // 둘 다 실패
+      }
+
+      // 3. 둘 다 실패 시 placeholder
+      setAssetImage(null);
+      setImageType('none');
+      setImageLoading(false);
     };
 
-    fetchBatchImage();
-  }, [selectedAsset?.batch_id]);
+    fetchAssetImage();
+
+    // cleanup blob URL
+    return () => {
+      if (assetImage?.startsWith('blob:')) {
+        URL.revokeObjectURL(assetImage);
+      }
+    };
+  }, [selectedAsset?.asset_id]);
 
   const ITEMS_PER_PAGE = 50;
 
@@ -114,7 +146,7 @@ export default function AssetsPage() {
         <div className="flex justify-between items-center mb-6">
           <div className="flex gap-3 items-center">
             <select value={filters.batchId} onChange={(e) => handleFilterChange({ ...filters, batchId: e.target.value })} className="px-4 py-2 bg-geo-card border border-geo-border rounded-lg text-txt-secondary text-sm focus:ring-2 focus:ring-status-purple/40 outline-none">
-              <option value="">전체 배치</option>
+              <option value="">전체 자산</option>
               {batches?.map((b: any) => <option key={b.batch_id} value={b.batch_id}>{b.name || `Batch ${b.batch_number}`}</option>)}
             </select>
             <select value={filters.status} onChange={(e) => handleFilterChange({ ...filters, status: e.target.value })} className="px-4 py-2 bg-geo-card border border-geo-border rounded-lg text-txt-secondary text-sm focus:ring-2 focus:ring-status-purple/40 outline-none">
@@ -127,7 +159,7 @@ export default function AssetsPage() {
             </select>
             <span className="text-sm text-txt-muted">총 {totalCount.toLocaleString()}개</span>
           </div>
-          <button onClick={() => { setModalPos({ x: 0, y: 0 }); setShowModal(true); }} className="px-4 py-2 bg-status-purple text-white rounded-lg hover:bg-status-purple/80 text-sm font-medium transition-all">+ 생성</button>
+{/* [HIDDEN] 추후 사용 예정 */ false && <button onClick={() => { setModalPos({ x: 0, y: 0 }); setShowModal(true); }} className="px-4 py-2 bg-status-purple text-white rounded-lg hover:bg-status-purple/80 text-sm font-medium transition-all">+ 생성</button>}
         </div>
 
         {isLoading ? <p className="text-txt-secondary">로딩 중...</p> : (
@@ -186,27 +218,38 @@ export default function AssetsPage() {
             </button>
           </div>
           <div className="flex-1 overflow-y-auto p-6">
-            <div className="bg-white p-3 rounded-xl flex justify-center mb-4 w-40 h-40 mx-auto">
-              <QRCodeSVG id="qr-code-svg" value={selectedAsset.dina_id} size={136} level="H" />
-            </div>
-
-            {/* 배치 원본 이미지 */}
+            {/* 자산 이미지 (QR 위에 배치) */}
             {imageLoading && (
-              <div className="flex justify-center items-center py-4 mb-4">
+              <div className="flex justify-center items-center py-8 mb-4">
                 <svg className="animate-spin h-6 w-6 text-status-purple" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
               </div>
             )}
-            {!imageLoading && batchImage && (
+            {!imageLoading && assetImage && (
               <div className="mb-4">
-                <p className="text-xs text-txt-muted uppercase tracking-wider mb-2">원본 이미지</p>
-                <div className="bg-geo-main border border-geo-border rounded-xl overflow-hidden">
-                  <img src={batchImage} alt="Batch image" className="w-full h-auto object-contain" />
+                <p className="text-xs text-txt-muted uppercase tracking-wider mb-2">
+                  {imageType === 'source' ? '원본 이미지' : '인쇄 결과물'}
+                </p>
+                <div className={`bg-geo-main border rounded-xl overflow-hidden ${imageType === 'rendered' ? 'border-status-green' : 'border-geo-border'}`}>
+                  <img src={assetImage} alt="Asset image" className="w-full h-auto object-contain" />
                 </div>
               </div>
             )}
+            {!imageLoading && !assetImage && (
+              <div className="mb-4">
+                <p className="text-xs text-txt-muted uppercase tracking-wider mb-2">이미지</p>
+                <div className="bg-geo-main border border-geo-border rounded-xl overflow-hidden flex items-center justify-center py-8">
+                  <span className="text-txt-muted text-sm">이미지 없음</span>
+                </div>
+              </div>
+            )}
+
+            {/* QR 코드 */}
+            <div className="bg-white p-3 rounded-xl flex justify-center mb-4 w-40 h-40 mx-auto">
+              <QRCodeSVG id="qr-code-svg" value={selectedAsset.dina_id} size={136} level="H" />
+            </div>
 
             <div className="space-y-4">
               <div>
@@ -230,7 +273,7 @@ export default function AssetsPage() {
         </div>
       )}
 
-      {showModal && (
+{/* [HIDDEN] 추후 사용 예정 */ false && showModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-start justify-center pt-20 px-4 pb-4" onMouseMove={handleMouseMove} onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp}>
           <div className="bg-geo-card border border-geo-border rounded-xl w-full max-w-sm flex flex-col cursor-move select-none" style={{ maxHeight: '85vh', transform: `translate(${modalPos.x}px, ${modalPos.y}px)` }} onMouseDown={handleMouseDown}>
             <div className="bg-geo-main px-6 py-3 border-b border-geo-border rounded-t-xl flex-shrink-0">
@@ -239,9 +282,9 @@ export default function AssetsPage() {
             <form onSubmit={handleSubmit} className="p-6 overflow-y-auto">
               <div className="space-y-4">
                 <div>
-                  <label className="block text-xs text-txt-secondary mb-1.5">배치 선택 *</label>
+                  <label className="block text-xs text-txt-secondary mb-1.5">자산 선택 *</label>
                   <select value={form.batchId} onChange={(e) => handleBatchSelect(e.target.value)} className="w-full px-4 py-2.5 bg-geo-main border border-geo-border rounded-lg text-txt-primary focus:ring-2 focus:ring-status-purple/40 outline-none" required>
-                    <option value="">배치를 선택하세요</option>
+                    <option value="">자산을 선택하세요</option>
                     {batches?.map((b: any) => <option key={b.batch_id} value={b.batch_id}>{b.name || `Batch ${b.batch_number}`} ({b.series_name})</option>)}
                   </select>
                 </div>

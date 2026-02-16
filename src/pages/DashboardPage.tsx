@@ -12,6 +12,13 @@ export default function DashboardPage() {
     queryFn: () => api.get('/batches').then((res) => res.data.data),
   });
 
+  const { data: shipments } = useQuery({
+    queryKey: ['shipments'],
+    queryFn: () => api.get('/shipments').then((res) => res.data),
+  });
+
+  const shippedCount = shipments?.filter((s: any) => s.status === 'SHIPPED').length || 0;
+
   const totalAssets = batches?.reduce((sum: number, b: any) => sum + (b.items_completed || 0), 0) || 0;
   const inProgress = batches?.filter((b: any) => b.status === 'IN_PROGRESS').length || 0;
   const completed = batches?.filter((b: any) => b.status === 'COMPLETED').length || 0;
@@ -34,7 +41,7 @@ export default function DashboardPage() {
       {/* Hero KPI */}
       <div className="bg-geo-card border border-geo-border rounded-[14px] p-7 mb-4 relative overflow-hidden hover:border-geo-border-hover hover:bg-geo-card-hover transition-all">
         <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-status-green to-status-blue" />
-        <div className="text-[13px] text-txt-secondary font-medium tracking-wide uppercase mb-2.5">총 발행 에셋</div>
+        <div className="text-[13px] text-txt-secondary font-medium tracking-wide uppercase mb-2.5">총 발행 자산</div>
         <div className="flex items-end justify-between">
           <div className="flex items-end gap-4">
             <span className="text-[56px] font-bold tracking-tighter font-mono text-status-green leading-none">
@@ -60,10 +67,11 @@ export default function DashboardPage() {
       </div>
 
       {/* Sub Stats */}
-      <div className="grid grid-cols-3 gap-4 mb-7">
+      <div className="grid grid-cols-4 gap-4 mb-7">
         <StatCard color="blue" label="활성 시리즈" value={series?.length || 0} sub={series?.[0]?.name || '-'} />
         <StatCard color="yellow" label="진행 중인 작업" value={inProgress + drafts} sub={`임시 저장 ${drafts} · 처리 중 ${inProgress}`} />
         <StatCard color="green" label="완료된 작업" value={completed} sub={`총 ${batches?.length || 0}건 중`} />
+        <StatCard color="purple" label="출고 완료" value={shippedCount} sub={`총 ${shipments?.length || 0}건 중`} />
       </div>
 
       {/* Two Column */}

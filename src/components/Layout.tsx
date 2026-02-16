@@ -19,10 +19,10 @@ const menuItems = [
   {
     section: '관리',
     items: [
-      { path: '/assets', label: '에셋 관리', icon: (
+      { path: '/assets', label: '자산 관리', icon: (
         <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg>
       )},
-      { path: '/exports', label: '데이터 출고', icon: (
+      { path: '/exports', label: '자산 출고', icon: (
         <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>
       )},
       { path: '/users', label: '사용자 관리', icon: (

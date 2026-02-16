@@ -115,7 +115,12 @@ export default function ShipmentDetailModal({ shipmentId, onClose }: ShipmentDet
   const handleDownload = async () => {
     try {
       const res = await api.get(`/shipments/${shipmentId}/download`);
-      window.open(res.data.downloadUrl, '_blank');
+      const link = document.createElement('a');
+      link.href = res.data.downloadUrl;
+      link.download = `${shipment?.display_id || 'shipment'}.zip`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     } catch (err: any) {
       toast.show(err.response?.data?.message || '다운로드 URL 생성 실패', 'error');
     }
@@ -342,6 +347,7 @@ export default function ShipmentDetailModal({ shipmentId, onClose }: ShipmentDet
 
           {/* 증빙 텍스트 복사 */}
           <div className="mb-6">
+            <p className="text-xs text-txt-muted mb-2">출고 증빙 정보(출고번호, SHA256, 자산목록)를 텍스트로 복사합니다.</p>
             <button
               onClick={handleCopyEvidence}
               className="w-full px-4 py-2 text-sm border border-geo-border rounded-lg text-txt-secondary hover:text-txt-primary hover:border-geo-border-hover transition-all"
