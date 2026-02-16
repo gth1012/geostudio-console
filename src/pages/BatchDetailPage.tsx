@@ -70,7 +70,7 @@ export default function BatchDetailPage() {
   });
 
   const lockMutation = useMutation({
-    mutationFn: (batchId: string) => api.patch(`/api/studio/batches/${batchId}/lock`),
+    mutationFn: (batchId: string) => api.patch(`/studio/batches/${batchId}/lock`),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['batch', id] }); toast.show('배치가 확정되었습니다', 'success'); },
     onError: (err: any) => { toast.show(err.response?.data?.message || '배치 확정 실패', 'error'); },
   });
