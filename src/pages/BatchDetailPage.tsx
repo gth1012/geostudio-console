@@ -65,18 +65,6 @@ export default function BatchDetailPage() {
     },
   });
 
-  const lockMutation = useMutation({
-    mutationFn: (batchId: string) => api.post(`/batches/${batchId}/lock`),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['batch', id] });
-      queryClient.invalidateQueries({ queryKey: ['batches'] });
-      toast.show('LOCK 확정 완료', 'success');
-    },
-    onError: (err: any) => {
-      toast.show(err.response?.data?.message || 'LOCK 실패', 'error');
-    },
-  });
-
   const unlockMutation = useMutation({
     mutationFn: (batchId: string) => api.post(`/batches/${batchId}/unlock`),
     onSuccess: () => {
@@ -196,13 +184,8 @@ export default function BatchDetailPage() {
           {batch.batch_locked_until && new Date(batch.batch_locked_until) > new Date() && (
             <button onClick={() => setShowUnlockConfirm(true)} className="px-4 py-2 bg-status-yellow text-geo-deep rounded-lg hover:bg-status-yellow/80 text-sm font-medium transition-all">잠금 해제</button>
           )}
-          {batch.status === 'DRAFT' && (batch.items_total || 0) < (batch.supply || 0) ? (
+          {batch.status === 'DRAFT' ? (
             <button onClick={() => { setModalPos({ x: 0, y: 0 }); setShowAssetModal(true); }} className="px-4 py-2 bg-status-purple text-white rounded-lg hover:bg-status-purple/80 text-sm font-medium transition-all">+ 자산 생성</button>
-          ) : batch.status === 'DRAFT' ? (
-            <>
-              <span className="px-4 py-2 bg-geo-card text-txt-muted border border-geo-border rounded-lg text-sm font-medium cursor-not-allowed">자산 생성 완료</span>
-              <button onClick={() => lockMutation.mutate(batch.batch_id)} disabled={lockMutation.isPending} className="px-4 py-2 bg-status-purple text-white rounded-lg hover:bg-status-purple/80 disabled:opacity-50 text-sm font-medium transition-all">{lockMutation.isPending ? 'LOCK 중..' : 'LOCK 확정'}</button>
-            </>
           ) : batch.status === 'LOCKED' ? (
             <button onClick={() => printMutation.mutate(batch.batch_id)} disabled={printMutation.isPending} className="px-4 py-2 bg-status-purple text-white rounded-lg hover:bg-status-purple/80 disabled:opacity-50 transition-all">{printMutation.isPending ? 'Print 중..' : 'Print 실행'}</button>
           ) : (
