@@ -85,7 +85,7 @@ export default function BatchDetailPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['batch', id] });
-      toast.show('Print 실행 요청', 'success');
+      toast.show('Print 작업이 큐에 등록되었습니다', 'success');
     },
     onError: (err: any) => {
       toast.show(err.response?.data?.message || 'Print 실행 실패', 'error');
