@@ -58,31 +58,46 @@ export default function BatchDetailPage() {
       queryClient.invalidateQueries({ queryKey: ['batches'] });
       setShowAssetModal(false);
       setSelectedBatches(new Set());
-      toast.show('자산 생성이 시작되었습니다', 'success');
+      toast.show('Print 실행 요청', 'success');
     },
-    onError: (err: any) => { toast.show(err.response?.data?.message || '자산 생성 실패', 'error'); },
-  });
-
-  const unlockMutation = useMutation({
-    mutationFn: (batchId: string) => api.post(`/geocam/admin/unlock-batch/${batchId}`),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['batch', id] }); queryClient.invalidateQueries({ queryKey: ['anomaly', id] }); setShowUnlockConfirm(false); toast.show('잠금이 해제되었습니다', 'success'); },
-    onError: (err: any) => { toast.show(err.response?.data?.message || '잠금 해제 실패', 'error'); },
+    onError: (err: any) => {
+      toast.show(err.response?.data?.message || 'Print 실행 실패', 'error');
+    },
   });
 
   const lockMutation = useMutation({
-    mutationFn: (batchId: string) => api.patch(`/studio/batches/${batchId}/lock`),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['batch', id] }); toast.show('배치가 확정되었습니다', 'success'); },
-    onError: (err: any) => { toast.show(err.response?.data?.message || '배치 확정 실패', 'error'); },
+    mutationFn: (batchId: string) => api.post(`/batches/${batchId}/lock`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['batch', id] });
+      queryClient.invalidateQueries({ queryKey: ['batches'] });
+      toast.show('LOCK 확정 완료', 'success');
+    },
+    onError: (err: any) => {
+      toast.show(err.response?.data?.message || 'LOCK 실패', 'error');
+    },
+  });
+
+  const unlockMutation = useMutation({
+    mutationFn: (batchId: string) => api.post(`/batches/${batchId}/unlock`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['batch', id] });
+      setShowUnlockConfirm(false);
+      toast.show('잠금 해제 완료', 'success');
+    },
+    onError: (err: any) => {
+      toast.show(err.response?.data?.message || '해제 실패', 'error');
+    },
   });
 
   const printMutation = useMutation({
-    mutationFn: async (batchId: string) => {
-      await api.post(`/print/prepare/${batchId}`);
-      return api.post(`/print/run/${batchId}`);
+    mutationFn: (batchId: string) => {
+      const url = `/print/batch/${batchId}/prepare-and-print`;
+      console.log('[Print] POST', url);
+      return api.post(url);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['batch', id] });
-      toast.show('Print 실행이 시작되었습니다', 'success');
+      toast.show('Print 실행 요청', 'success');
     },
     onError: (err: any) => {
       toast.show(err.response?.data?.message || 'Print 실행 실패', 'error');
@@ -133,16 +148,34 @@ export default function BatchDetailPage() {
   const handleMouseUp = () => { if (isDragging) setIsDragging(false); };
 
   const getStatusBadge = (status: string) => {
-    const map: Record<string, string> = { COMPLETED: 'bg-status-green-dim text-status-green', PROCESSING: 'bg-status-blue-dim text-status-blue', CREATED: 'bg-status-yellow-dim text-status-yellow', FAILED: 'bg-status-red-dim text-status-red', DRAFT: 'bg-status-yellow-dim text-status-yellow', LOCKED: 'bg-status-purple-dim text-status-purple', SHIPPED: 'bg-status-green-dim text-status-green' };
+    const map: Record<string,string> = {
+      DRAFT:'초안',
+      IN_PROGRESS:'진행중',
+      COMPLETED:'완료',
+      SHIPPED:'출고완료',
+      FAILED:'실패',
+      LOCKED:'확정',
+      CREATED:'생성됨',
+      PROCESSING:'처리중'
+    };
     return map[status] || 'bg-status-yellow-dim text-status-yellow';
   };
 
   const getStatusLabel = (status: string) => {
-    const map: Record<string, string> = { DRAFT: '임시저장', IN_PROGRESS: '진행중', COMPLETED: '완료', SHIPPED: '출고완료', FAILED: '실패', LOCKED: '확정', CREATED: '생성됨', PROCESSING: '처리중' };
+    const map: Record<string,string> = {
+      DRAFT:'초안',
+      IN_PROGRESS:'진행중',
+      COMPLETED:'완료',
+      SHIPPED:'출고완료',
+      FAILED:'실패',
+      LOCKED:'확정',
+      CREATED:'생성됨',
+      PROCESSING:'처리중'
+    };
     return map[status] || status;
   };
 
-  if (batchLoading) return <p className="text-txt-secondary">로딩 중...</p>;
+  if (batchLoading) return <p className="text-txt-secondary">로딩 중..</p>;
   if (!batch) return <p className="text-txt-muted">자산을 찾을 수 없습니다.</p>;
 
   return (
@@ -168,10 +201,10 @@ export default function BatchDetailPage() {
           ) : batch.status === 'DRAFT' ? (
             <>
               <span className="px-4 py-2 bg-geo-card text-txt-muted border border-geo-border rounded-lg text-sm font-medium cursor-not-allowed">자산 생성 완료</span>
-              <button onClick={() => lockMutation.mutate(batch.batch_id)} disabled={lockMutation.isPending} className="px-4 py-2 bg-status-green text-white rounded-lg hover:bg-status-green/80 disabled:opacity-50 text-sm font-medium transition-all">{lockMutation.isPending ? 'LOCK 중...' : 'LOCK 확정'}</button>
+              <button onClick={() => lockMutation.mutate(batch.batch_id)} disabled={lockMutation.isPending} className="px-4 py-2 bg-status-purple text-white rounded-lg hover:bg-status-purple/80 disabled:opacity-50 text-sm font-medium transition-all">{lockMutation.isPending ? 'LOCK 중..' : 'LOCK 확정'}</button>
             </>
           ) : batch.status === 'LOCKED' ? (
-            <button onClick={() => printMutation.mutate(batch.batch_id)} disabled={printMutation.isPending} className="px-4 py-2 bg-status-purple text-white rounded-lg hover:bg-status-purple/80 disabled:opacity-50 transition-all">{printMutation.isPending ? 'Print 중...' : 'Print 실행'}</button>
+            <button onClick={() => printMutation.mutate(batch.batch_id)} disabled={printMutation.isPending} className="px-4 py-2 bg-status-purple text-white rounded-lg hover:bg-status-purple/80 disabled:opacity-50 transition-all">{printMutation.isPending ? 'Print 중..' : 'Print 실행'}</button>
           ) : (
             <span className="px-4 py-2 bg-status-green text-white rounded-lg text-sm font-medium">확정</span>
           )}
@@ -200,7 +233,7 @@ export default function BatchDetailPage() {
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div>
-              <p className="text-xs text-txt-muted uppercase tracking-wider mb-1">5분 내 검증 수</p>
+              <p className="text-xs text-txt-muted uppercase tracking-wider mb-1">5분당 검증수</p>
               <p className={`font-medium font-mono text-lg ${anomalyStatus.current_verify_count >= anomalyStatus.threshold ? 'text-status-red' : 'text-txt-primary'}`}>
                 {anomalyStatus.current_verify_count ?? 0}
               </p>
@@ -231,7 +264,7 @@ export default function BatchDetailPage() {
       {/* 자산 목록은 자산 관리 페이지에서 확인 안내 */}
       <div className="bg-geo-card border border-geo-border rounded-xl p-6">
         <p className="text-sm text-txt-secondary text-center">
-          자산 목록은 <button onClick={() => navigate('/assets')} className="text-status-purple hover:underline font-medium">자산 관리</button> 페이지에서 확인하세요.
+          자산 목록은 <button onClick={() => navigate('/assets')} className="text-status-purple hover:underline font-medium">자산 관리</button> 페이지에서 확인하세요
         </p>
       </div>
 
@@ -240,36 +273,35 @@ export default function BatchDetailPage() {
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center">
           <div className="bg-geo-card border border-geo-border rounded-xl w-full max-w-sm p-6">
             <h3 className="text-base font-semibold text-txt-primary mb-2">자산 잠금 해제</h3>
-            <p className="text-sm text-txt-secondary mb-2">이 자산의 이상 감지 잠금을 해제합니다.</p>
+            <p className="text-sm text-txt-secondary mb-2">이 자산의 이상 감지 잠금을 해제합니다</p>
             {batch.lock_reason && (
               <p className="text-sm text-status-yellow mb-2">잠금 사유: {batch.lock_reason}</p>
             )}
-            <p className="text-xs text-txt-muted mb-6">해제 후 다시 이상이 감지되면 자동으로 잠길 수 있습니다.</p>
+            <p className="text-xs text-txt-muted mb-6">해제 후 다시 이상이 감지되면 자동으로 잠금 될 수 있습니다.</p>
             {unlockMutation.isError && <p className="text-sm text-status-red mb-4">{(unlockMutation.error as any)?.response?.data?.message || '해제 실패'}</p>}
             <div className="flex justify-end gap-3">
               <button onClick={() => setShowUnlockConfirm(false)} disabled={unlockMutation.isPending} className="px-4 py-2 text-sm text-txt-secondary border border-geo-border rounded-lg hover:border-geo-border-hover transition-all">취소</button>
               <button onClick={() => unlockMutation.mutate(batch.batch_id)} disabled={unlockMutation.isPending}
                 className="px-4 py-2 text-sm font-medium bg-status-yellow text-geo-deep rounded-lg hover:bg-status-yellow/80 transition-all disabled:opacity-50">
-                {unlockMutation.isPending ? '해제 중...' : '잠금 해제'}
+                {unlockMutation.isPending ? '해제 중..' : '잠금 해제'}
               </button>
             </div>
           </div>
         </div>
       )}
 
-
       {/* 자산 생성 모달 */}
       {showAssetModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center px-4" onMouseMove={handleMouseMove} onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp}>
           <div className="bg-geo-card border border-geo-border rounded-xl w-full max-w-md flex flex-col cursor-move select-none" style={{ maxHeight: '85vh', transform: `translate(${modalPos.x}px, ${modalPos.y}px)` }} onMouseDown={handleMouseDown}>
-            {/* 상단: 시리즈/배치 정보 */}
+            {/* 상단: 시리즈 배치 정보 */}
             <div className="bg-geo-main px-6 py-3 border-b border-geo-border rounded-t-xl flex-shrink-0">
               <h2 className="text-lg font-semibold text-txt-primary">자산 생성</h2>
             </div>
             <div className="px-6 py-3 border-b border-geo-border flex-shrink-0">
               <div className="text-xs text-txt-secondary">Series</div>
               <div className="text-sm text-txt-primary font-medium">
-                {batch.series?.name ?? batch.series_name ?? '—'} ({batch.series?.code ?? batch.series_code ?? '-'})
+                {batch.series?.name ?? batch.series_name ?? '?'} ({batch.series?.code ?? batch.series_code ?? '-'})
               </div>
             </div>
 
@@ -332,8 +364,10 @@ export default function BatchDetailPage() {
             {/* 하단: 총 자산 수 + 버튼 */}
             <div className="px-6 py-4 border-t border-geo-border flex-shrink-0">
               <div className="flex items-center justify-between mb-4">
-                <span className="text-sm text-txt-secondary">선택된 총 자산 수</span>
-                <span className="text-lg font-semibold text-status-purple font-mono">{totalSelectedAssets.toLocaleString()}개</span>
+                <span className="text-sm text-txt-secondary">선택된 자산</span>
+                <span className="text-lg font-semibold text-status-purple font-mono">
+                  {totalSelectedAssets.toLocaleString()}개
+                </span>
               </div>
               <div className="flex gap-2">
                 <button
@@ -348,7 +382,7 @@ export default function BatchDetailPage() {
                   disabled={createAssetsMutation.isPending || selectedBatches.size === 0}
                   className="flex-1 px-4 py-2.5 bg-status-purple text-white rounded-lg font-medium hover:bg-status-purple/80 disabled:opacity-50 transition-all"
                 >
-                  {createAssetsMutation.isPending ? '생성 중...' : '생성'}
+                  {createAssetsMutation.isPending ? '생성 중..' : '생성'}
                 </button>
               </div>
             </div>
