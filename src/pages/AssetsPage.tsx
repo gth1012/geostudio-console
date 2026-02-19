@@ -19,7 +19,7 @@ export default function AssetsPage() {
   const queryClient = useQueryClient();
   const toast = useToastStore();
 
-  // 선택된 에셋 이미지 로드 (source 우선, 실패 시 rendered, 둘 다 실패 시 placeholder)
+  // 선택된 에셋 이미지 로드 (rendered 우선, 실패 시 source, 둘 다 실패 시 placeholder)
   useEffect(() => {
     if (!selectedAsset?.asset_id) {
       setAssetImage(null);
@@ -32,22 +32,7 @@ export default function AssetsPage() {
       setAssetImage(null);
       setImageType('none');
 
-      // 1. source 이미지 시도
-      try {
-        const res = await api.get(`/assets/${selectedAsset.asset_id}/image-proxy?type=source`, {
-          responseType: 'arraybuffer',
-        });
-        const blob = new Blob([res.data], { type: res.headers['content-type'] || 'image/jpeg' });
-        const url = URL.createObjectURL(blob);
-        setAssetImage(url);
-        setImageType('source');
-        setImageLoading(false);
-        return;
-      } catch {
-        // source 실패, rendered 시도
-      }
-
-      // 2. rendered 이미지 시도
+      // 1. rendered 이미지 시도
       try {
         const res = await api.get(`/assets/${selectedAsset.asset_id}/image-proxy?type=rendered`, {
           responseType: 'arraybuffer',
@@ -56,6 +41,21 @@ export default function AssetsPage() {
         const url = URL.createObjectURL(blob);
         setAssetImage(url);
         setImageType('rendered');
+        setImageLoading(false);
+        return;
+      } catch {
+        // rendered 실패, source 시도
+      }
+
+      // 2. source 이미지 시도
+      try {
+        const res = await api.get(`/assets/${selectedAsset.asset_id}/image-proxy?type=source`, {
+          responseType: 'arraybuffer',
+        });
+        const blob = new Blob([res.data], { type: res.headers['content-type'] || 'image/jpeg' });
+        const url = URL.createObjectURL(blob);
+        setAssetImage(url);
+        setImageType('source');
         setImageLoading(false);
         return;
       } catch {
