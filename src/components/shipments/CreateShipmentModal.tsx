@@ -52,7 +52,7 @@ export default function CreateShipmentModal({ onClose }: CreateShipmentModalProp
   // 선택한 시리즈의 PRINTED 자산 목록 (출고 생성 시 자동 LOCK)
   const { data: assets, isLoading: assetsLoading } = useQuery({
     queryKey: ['assets-printed', selectedSeriesId],
-    queryFn: () => api.get(`/assets?seriesId=${selectedSeriesId}&status=PRINTED`).then(res => res.data.data as Asset[]),
+    queryFn: () => api.get(`/assets?seriesId=${selectedSeriesId}&printStatus=PRINTED`).then(res => res.data.data as Asset[]),
     enabled: !!selectedSeriesId && step === 'assets',
   });
 
