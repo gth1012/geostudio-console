@@ -25,6 +25,14 @@ export default function BatchDetailPage() {
   const toast = useToastStore();
   const { data: batch, isLoading: batchLoading } = useQuery({ queryKey: ['batch', id], queryFn: () => api.get(`/batches/${id}`).then((res) => res.data.data) });
 
+  // Print 통계 조회 (pending/printed/failed)
+  const { data: printStats } = useQuery({
+    queryKey: ['print-stats', id],
+    queryFn: () => api.get(`/monitoring/batches/${id}`).then((res) => res.data),
+    enabled: !!id,
+    refetchInterval: 5000,
+  });
+
   // 같은 시리즈의 모든 배치 목록 조회
   const { data: allBatches } = useQuery({
     queryKey: ['batches'],
@@ -200,7 +208,7 @@ export default function BatchDetailPage() {
           <div><p className="text-xs text-txt-muted uppercase tracking-wider mb-1">시리즈</p><p className="font-medium text-txt-primary">{batch.series?.name || '-'}</p></div>
           <div><p className="text-xs text-txt-muted uppercase tracking-wider mb-1">코드</p><p className="font-medium text-txt-primary font-mono">{batch.series?.code || '-'}</p></div>
           <div><p className="text-xs text-txt-muted uppercase tracking-wider mb-1">총 자산</p><p className="font-medium text-txt-primary font-mono">{batch.items_total || 0}</p></div>
-          <div><p className="text-xs text-txt-muted uppercase tracking-wider mb-1">완료</p><p className="font-medium text-status-green font-mono">{batch.items_completed || 0}</p></div>
+          <div><p className="text-xs text-txt-muted uppercase tracking-wider mb-1">완료</p><p className="font-medium text-status-green font-mono">{printStats?.printed ?? 0}</p></div>
           <div><p className="text-xs text-txt-muted uppercase tracking-wider mb-1">생성일</p><p className="font-medium text-txt-primary">{new Date(batch.created_at).toLocaleDateString()}</p></div>
         </div>
       </div>
