@@ -23,12 +23,16 @@ export default function BatchDetailPage() {
   const dragOffset = useRef({ x: 0, y: 0 });
 
   const toast = useToastStore();
+  console.log("batchId:", id);
   const { data: batch, isLoading: batchLoading } = useQuery({ queryKey: ['batch', id], queryFn: () => api.get(`/batches/${id}`).then((res) => res.data.data) });
 
   // Print 통계 조회 (pending/printed/failed)
   const { data: printStats } = useQuery({
     queryKey: ['print-stats', id],
-    queryFn: () => api.get(`/monitoring/batches/${id}`).then((res) => res.data),
+    queryFn: () => {
+      console.log("monitoring call");
+      return api.get(`/monitoring/batches/${id}`).then((res) => res.data);
+    },
     enabled: !!id,
     refetchInterval: 5000,
   });
