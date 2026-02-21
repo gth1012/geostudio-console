@@ -9,6 +9,8 @@ import BatchesPage from './pages/BatchesPage';
 import BatchDetailPage from './pages/BatchDetailPage';
 import AssetsPage from './pages/AssetsPage';
 import ExportsPage from './pages/ExportsPage';
+import DistributionPage from './pages/DistributionPage';
+import ActivationPage from './pages/ActivationPage';
 import UsersPage from './pages/UsersPage';
 import AuditPage from './pages/AuditPage';
 import SystemAdminPage from './pages/SystemAdminPage';
@@ -40,6 +42,8 @@ export default function App() {
             <Route path="batches" element={<BatchesPage />} /><Route path="batches/:id" element={<BatchDetailPage />} />
             <Route path="assets" element={<AssetsPage />} />
             <Route path="exports" element={<ExportsPage />} />
+            <Route path="distributions" element={<DistributionPage />} />
+            <Route path="activations" element={<ActivationPage />} />
             <Route path="users" element={<UsersPage />} />
             <Route path="audit" element={<AuditPage />} />
             <Route path="system-admin" element={<SystemAdminPage />} />
