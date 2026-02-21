@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import api from '../services/api';
 
@@ -59,8 +59,8 @@ export default function DistributionPage() {
       {/* Header */}
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h2 className="text-xl font-semibold text-txt-primary">배포 관리</h2>
-          <p className="text-sm text-txt-muted mt-1">배포 기록 및 관리</p>
+          <h2 className="text-xl font-semibold text-txt-primary">QR 발송 관리</h2>
+          <p className="text-sm text-txt-muted mt-1">QR 발송 기록 및 관리</p>
         </div>
         <button
           onClick={() => setShowCreateModal(true)}
@@ -160,3 +160,4 @@ export default function DistributionPage() {
     </div>
   );
 }
+

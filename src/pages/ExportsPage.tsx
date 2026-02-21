@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import api from '../services/api';
 import { useToastStore } from '../stores/toast.store';
@@ -78,7 +78,7 @@ export default function ExportsPage() {
       {/* Header */}
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h2 className="text-xl font-semibold text-txt-primary">자산 출고</h2>
+          <h2 className="text-xl font-semibold text-txt-primary">출고 관리</h2>
           <p className="text-sm text-txt-muted mt-1">출고 기록 및 관리</p>
         </div>
         <button
@@ -176,3 +176,4 @@ export default function ExportsPage() {
     </div>
   );
 }
+

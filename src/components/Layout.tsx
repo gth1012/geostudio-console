@@ -33,7 +33,7 @@ const getRoleBasedMenuItems = (role: string | undefined) => {
         { path: '/distributions', label: '배포 관리', icon: (
           <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
         )},
-        { path: '/activations', label: '최초 등록', icon: (
+        { path: '/activations', label: '최초 등록 요청', icon: (
           <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22,4 12,14.01 9,11.01"/></svg>
         )},
         { path: '/users', label: '사용자 관리', icon: (
@@ -68,13 +68,13 @@ const getRoleBasedMenuItems = (role: string | undefined) => {
       {
         section: '기능',
         items: [
-          { path: '/exports', label: '제조공장 전달', icon: (
+          { path: '/exports', label: '출고 관리', icon: (
             <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>
           )},
-          { path: '/distributions', label: 'QR 발송', icon: (
+          { path: '/distributions', label: 'QR 발송 관리', icon: (
             <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
           )},
-          { path: '/activations', label: '최초 등록', icon: (
+          { path: '/activations', label: '최초 등록 요청', icon: (
             <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22,4 12,14.01 9,11.01"/></svg>
           )},
         ],
@@ -171,7 +171,7 @@ export default function Layout() {
       </aside>
 
       <main className="ml-[220px] flex-1 flex flex-col">
-        <header className="h-16 bg-white border-b border-geo-border flex items-center px-8">
+        <header className="h-16 bg-geo-card border-b border-geo-border flex items-center px-8">
           <h1 className="text-xl font-semibold text-txt-primary">{currentLabel || 'GeoStudio'}</h1>
         </header>
 
@@ -182,3 +182,5 @@ export default function Layout() {
     </div>
   );
 }
+
+
