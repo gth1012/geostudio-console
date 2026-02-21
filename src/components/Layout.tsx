@@ -51,7 +51,6 @@ const getRoleBasedMenuItems = (role: string | undefined) => {
     },
   ];
 
-  // agency_admin: 제한된 메뉴만
   if (role === 'agency_admin') {
     return [
       {
@@ -79,7 +78,6 @@ const getRoleBasedMenuItems = (role: string | undefined) => {
     ];
   }
 
-  // super_admin, ops_admin, viewer: 전체 메뉴
   return allMenuItems;
 };
 
@@ -106,9 +104,7 @@ export default function Layout() {
 
   return (
     <div className="flex min-h-screen bg-geo-main">
-      {/* Sidebar */}
       <aside className="w-[220px] min-h-screen bg-geo-sidebar border-r border-geo-border flex flex-col fixed z-10">
-        {/* Logo */}
         <div className="px-5 py-6 flex items-center gap-2.5 border-b border-geo-border">
           <div className="w-8 h-8 bg-gradient-to-br from-status-purple to-status-blue rounded-lg flex items-center justify-center text-sm font-bold text-white">
             G
@@ -116,7 +112,6 @@ export default function Layout() {
           <span className="text-base font-semibold tracking-tight text-txt-primary">GeoStudio</span>
         </div>
 
-        {/* Nav */}
         <nav className="p-2 flex-1 flex flex-col gap-0.5">
           {menuItems.map((section) => (
             <div key={section.section}>
@@ -146,7 +141,6 @@ export default function Layout() {
           ))}
         </nav>
 
-        {/* User Section */}
         <div className="p-2 border-t border-geo-border flex flex-col gap-0.5">
           <div className="px-3 py-2.5 text-sm text-txt-secondary">
             {user?.email}
@@ -163,14 +157,11 @@ export default function Layout() {
         </div>
       </aside>
 
-      {/* Main Content */}
       <main className="ml-[220px] flex-1 flex flex-col">
-        {/* Header */}
         <header className="h-16 bg-white border-b border-geo-border flex items-center px-8">
           <h1 className="text-xl font-semibold text-txt-primary">{currentLabel || 'GeoStudio'}</h1>
         </header>
 
-        {/* Content */}
         <div className="flex-1 overflow-auto">
           <Outlet />
         </div>
