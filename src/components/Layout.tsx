@@ -3,6 +3,8 @@ import { useAuthStore } from '../stores/auth.store';
 
 // Role 기반 메뉴 필터링
 const getRoleBasedMenuItems = (role: string | undefined) => {
+  console.log(' getRoleBasedMenuItems called with role:', role);
+  
   const allMenuItems = [
     {
       section: '메인',
@@ -52,6 +54,7 @@ const getRoleBasedMenuItems = (role: string | undefined) => {
   ];
 
   if (role === 'agency_admin') {
+    console.log(' Returning agency_admin filtered menu');
     return [
       {
         section: '메인',
@@ -78,6 +81,7 @@ const getRoleBasedMenuItems = (role: string | undefined) => {
     ];
   }
 
+  console.log(' Returning all menu items');
   return allMenuItems;
 };
 
@@ -85,6 +89,9 @@ export default function Layout() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
+
+  console.log(' Layout render - user:', user);
+  console.log(' user?.role:', user?.role);
 
   const handleLogout = () => {
     logout();
