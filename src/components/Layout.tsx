@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 
 // Role 기반 메뉴 필터링
 const getRoleBasedMenuItems = (role: string | undefined) => {
-  console.log(' getRoleBasedMenuItems called with role:', role);
   
   const allMenuItems = [
     {
@@ -55,8 +54,7 @@ const getRoleBasedMenuItems = (role: string | undefined) => {
   ];
 
   if (role === 'agency_admin') {
-    console.log(' Returning agency_admin filtered menu (4 items)');
-    return [
+      return [
       {
         section: '메인',
         items: [
@@ -82,7 +80,6 @@ const getRoleBasedMenuItems = (role: string | undefined) => {
     ];
   }
 
-  console.log(' Returning all menu items for super_admin/ops_admin/viewer');
   return allMenuItems;
 };
 
@@ -94,8 +91,7 @@ export default function Layout() {
 
   useEffect(() => {
     setMounted(true);
-    console.log(' Layout mounted. user:', user);
-  }, [user]);
+    }, [user]);
 
   const handleLogout = () => {
     logout();
@@ -182,5 +178,6 @@ export default function Layout() {
     </div>
   );
 }
+
 
 
