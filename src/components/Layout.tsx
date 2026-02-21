@@ -1,5 +1,6 @@
 ﻿import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/auth.store';
+import { useEffect, useState } from 'react';
 
 // Role 기반 메뉴 필터링
 const getRoleBasedMenuItems = (role: string | undefined) => {
@@ -54,7 +55,7 @@ const getRoleBasedMenuItems = (role: string | undefined) => {
   ];
 
   if (role === 'agency_admin') {
-    console.log(' Returning agency_admin filtered menu');
+    console.log(' Returning agency_admin filtered menu (4 items)');
     return [
       {
         section: '메인',
@@ -81,7 +82,7 @@ const getRoleBasedMenuItems = (role: string | undefined) => {
     ];
   }
 
-  console.log(' Returning all menu items');
+  console.log(' Returning all menu items for super_admin/ops_admin/viewer');
   return allMenuItems;
 };
 
@@ -89,9 +90,12 @@ export default function Layout() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
+  const [mounted, setMounted] = useState(false);
 
-  console.log(' Layout render - user:', user);
-  console.log(' user?.role:', user?.role);
+  useEffect(() => {
+    setMounted(true);
+    console.log(' Layout mounted. user:', user);
+  }, [user]);
 
   const handleLogout = () => {
     logout();
@@ -108,6 +112,8 @@ export default function Layout() {
   const currentLabel = menuItems
     .flatMap((s) => s.items)
     .find((m) => isActive(m.path))?.label || '';
+
+  if (!mounted) return null;
 
   return (
     <div className="flex min-h-screen bg-geo-main">
