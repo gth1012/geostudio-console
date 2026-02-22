@@ -46,8 +46,8 @@ export default function ActivationPage() {
     <div className="animate-fade-in">
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h2 className="text-xl font-semibold text-txt-primary">최초 등록 요청 관리</h2>
-          <p className="text-sm text-txt-muted mt-1">최초 등록 요청 기록 및 관리</p>
+          <h2 className="text-xl font-semibold text-txt-primary">정품 등록 관리</h2>
+          <p className="text-sm text-txt-muted mt-1">정품 등록 기록 및 관리</p>
         </div>
       </div>
 
@@ -58,11 +58,11 @@ export default function ActivationPage() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-geo-border">
-                <th className="px-6 py-3 text-left text-xs font-semibold text-txt-secondary uppercase tracking-wider">요청 ID</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-txt-secondary uppercase tracking-wider">Run ID</th>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-txt-secondary uppercase tracking-wider">프로젝트명</th>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-txt-secondary uppercase tracking-wider">수량</th>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-txt-secondary uppercase tracking-wider">상태</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-txt-secondary uppercase tracking-wider">요청일시</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-txt-secondary uppercase tracking-wider">실행일시</th>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-txt-secondary uppercase tracking-wider">완료일시</th>
               </tr>
             </thead>
@@ -87,7 +87,7 @@ export default function ActivationPage() {
               {!requests?.length && (
                 <tr>
                   <td colSpan={6} className="px-6 py-12 text-center text-txt-muted">
-                    등록 요청 기록이 없습니다.
+                    정품 등록 기록이 없습니다.
                   </td>
                 </tr>
               )}

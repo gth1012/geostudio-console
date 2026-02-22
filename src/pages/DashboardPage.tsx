@@ -35,7 +35,7 @@ function AgencyDashboard() {
         <KpiCard color="yellow" label="출고 대기" value={shipmentPending} />
         <KpiCard color="green" label="출고 완료" value={shipmentDelivered} />
         <KpiCard color="blue" label="QR 발송 대기" value={qrPending} />
-        <KpiCard color="purple" label="최초 등록 요청 대기" value={activationPending} />
+        <KpiCard color="purple" label="정품 등록 진행중" value={activationPending} />
       </div>
 
       {/* 리스트 2개 */}
@@ -70,12 +70,12 @@ function AgencyDashboard() {
         {/* 최근 최초 등록 요청 */}
         <div className="bg-geo-card border border-geo-border rounded-xl overflow-hidden hover:border-geo-border-hover transition-colors">
           <div className="px-5 py-3.5 flex items-center justify-between border-b border-geo-border">
-            <span className="text-sm font-semibold text-txt-primary">최근 최초 등록 요청</span>
+            <span className="text-sm font-semibold text-txt-primary">최근 정품 등록</span>
             <span className="text-[11px] px-2 py-0.5 rounded-md font-medium font-mono bg-status-purple-dim text-status-purple">
               0건
             </span>
           </div>
-          <div className="px-5 py-8 text-center text-txt-muted text-sm">등록 요청 기록이 없습니다</div>
+          <div className="px-5 py-8 text-center text-txt-muted text-sm">정품 등록 기록이 없습니다</div>
         </div>
       </div>
     </div>
