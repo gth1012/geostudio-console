@@ -147,7 +147,7 @@ export default function CreateShipmentModal({ onClose }: CreateShipmentModalProp
     >
       <div
         className="bg-geo-card border border-geo-border rounded-xl w-full max-w-2xl flex flex-col cursor-move select-none"
-        style={{ maxHeight: '80vh', transform: `translate(${modalPos.x}px, ${modalPos.y}px)` }}
+        style={{ maxHeight: '70vh', transform: `translate(${modalPos.x}px, ${modalPos.y}px)` }}
         onMouseDown={handleMouseDown}
       >
         {/* Header */}
