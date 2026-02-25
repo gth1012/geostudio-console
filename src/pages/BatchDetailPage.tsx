@@ -111,6 +111,17 @@ export default function BatchDetailPage() {
     refetchInterval: 30000,
   });
 
+  const lockReferenceMutation = useMutation({
+    mutationFn: (batchId: string) => api.post(`/batches/${batchId}/lock-reference`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['batch', id] });
+      toast.show('기준 확정 완료', 'success');
+    },
+    onError: (err: any) => {
+      toast.show(err.response?.data?.message || '기준 확정 실패', 'error');
+    },
+  });
+
   const handleCreateAssets = () => {
     if (selectedBatches.size === 0) return;
     const batchesToCreate = seriesBatches
@@ -188,6 +199,15 @@ export default function BatchDetailPage() {
           <span className={`px-2 py-1 rounded text-xs font-medium ${batch.batch_reference_status === 'LOCKED' ? 'bg-status-green-dim text-status-green' : 'bg-status-yellow-dim text-status-yellow'}`}>
             {batch.batch_reference_status === 'LOCKED' ? '기준: 확정' : '기준: 미확정'}
           </span>
+          {batch.batch_reference_status === 'CANDIDATE' && batch.status === 'LOCKED' && (
+            <button
+              onClick={() => lockReferenceMutation.mutate(batch.batch_id)}
+              disabled={lockReferenceMutation.isPending}
+              className="px-2 py-1 text-xs font-medium bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 transition-all"
+            >
+              {lockReferenceMutation.isPending ? '확정 중..' : '기준 확정'}
+            </button>
+          )}
           {batch.batch_locked_until && new Date(batch.batch_locked_until) > new Date() && (
             <span className="px-2 py-1 rounded text-xs font-bold bg-status-red/20 text-status-red border border-status-red/30 animate-pulse">LOCKED</span>
           )}

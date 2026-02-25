@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../services/api';
 import { useToastStore } from '../stores/toast.store';
@@ -51,8 +52,8 @@ interface SeriesModalProps {
 
 function SeriesModal({ mode, form, setForm, onSubmit, onClose, isPending, modalPos, onMouseDown, onMouseMove, onMouseUp }: SeriesModalProps) {
   const isEdit = mode === 'edit';
-  return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center px-4" onMouseMove={onMouseMove} onMouseUp={onMouseUp} onMouseLeave={onMouseUp}>
+  return createPortal(
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center px-4 overflow-y-auto" onMouseMove={onMouseMove} onMouseUp={onMouseUp} onMouseLeave={onMouseUp}>
       <div className="bg-geo-card border border-geo-border rounded-xl w-full max-w-sm cursor-move select-none" style={{ transform: `translate(${modalPos.x}px, ${modalPos.y}px)` }} onMouseDown={onMouseDown}>
         <div className="bg-geo-main px-6 py-3 border-b border-geo-border rounded-t-xl flex items-center justify-between">
           <h2 className="text-lg font-semibold text-txt-primary">{isEdit ? '시리즈 수정' : '새 시리즈 생성'}</h2>
@@ -60,7 +61,7 @@ function SeriesModal({ mode, form, setForm, onSubmit, onClose, isPending, modalP
             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12" /></svg>
           </button>
         </div>
-        <form onSubmit={onSubmit} className="p-6">
+        <form onSubmit={onSubmit} className="p-6 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 120px)' }}>
           <div className="space-y-4">
             <div>
               <label className="block text-xs text-txt-secondary mb-1.5">시리즈 이름 *</label>
@@ -100,7 +101,8 @@ function SeriesModal({ mode, form, setForm, onSubmit, onClose, isPending, modalP
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
@@ -274,7 +276,7 @@ export default function SeriesPage() {
       )}
 
       {/* 커스텀 확인 모달 */}
-      {confirmModal.show && (
+      {confirmModal.show && createPortal(
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center px-4">
           <div className="bg-gray-900 border border-geo-border rounded-xl w-full max-w-sm p-6">
             <p className="text-txt-primary text-center mb-2">{confirmModal.message}</p>
@@ -290,7 +292,8 @@ export default function SeriesPage() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

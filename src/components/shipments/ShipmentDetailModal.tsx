@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../services/api';
 import { useToastStore } from '../../stores/toast.store';
@@ -178,7 +179,7 @@ export default function ShipmentDetailModal({ shipmentId, onClose }: ShipmentDet
 
   const getStatusLabel = (status: string) => {
     const map: Record<string, string> = {
-      READY: '대기',
+      READY: '준비완료',
       SHIPPED: '출고완료',
       VOID: '무효',
     };
@@ -186,12 +187,13 @@ export default function ShipmentDetailModal({ shipmentId, onClose }: ShipmentDet
   };
 
   if (isLoading) {
-    return (
+    return createPortal(
       <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center">
         <div className="bg-geo-card border border-geo-border rounded-xl p-6">
           <p className="text-txt-secondary">로딩 중...</p>
         </div>
-      </div>
+      </div>,
+      document.body
     );
   }
 
@@ -199,7 +201,7 @@ export default function ShipmentDetailModal({ shipmentId, onClose }: ShipmentDet
 
   // 출고 확정 모달
   if (showConfirmModal) {
-    return (
+    return createPortal(
       <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center px-4">
         <div className="bg-geo-card border border-geo-border rounded-xl w-full max-w-md">
           {/* Header */}
@@ -271,11 +273,12 @@ export default function ShipmentDetailModal({ shipmentId, onClose }: ShipmentDet
             </button>
           </div>
         </div>
-      </div>
+      </div>,
+      document.body
     );
   }
 
-  return (
+  return createPortal(
     <div
       className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center px-4"
       onMouseMove={handleMouseMove}
@@ -441,6 +444,7 @@ export default function ShipmentDetailModal({ shipmentId, onClose }: ShipmentDet
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

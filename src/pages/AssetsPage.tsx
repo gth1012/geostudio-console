@@ -96,8 +96,8 @@ export default function AssetsPage() {
   const { data: batches } = useQuery({ queryKey: ['batches'], queryFn: () => api.get('/batches').then((res) => res.data.data) });
 
   const assets = assetsResponse?.data || [];
-  const totalPages = assetsResponse?.total_pages || 1;
-  const totalCount = assetsResponse?.total || 0;
+  const totalPages = assetsResponse?.meta?.total_pages || 1;
+  const totalCount = assetsResponse?.meta?.total || 0;
 
   // 페이지 진입 시 첫번째 에셋 자동 선택
   useEffect(() => {
@@ -129,13 +129,15 @@ export default function AssetsPage() {
     setCurrentPage(1);
   };
 
-  const getStatusBadge = (status: string) => {
-    const map: Record<string, string> = { QR_GENERATED: 'bg-status-green-dim text-status-green', DINA_INSERTED: 'bg-status-blue-dim text-status-blue', EXPORTED: 'bg-status-purple-dim text-status-purple', CREATED: 'bg-status-yellow-dim text-status-yellow', ISSUED: 'bg-status-green-dim text-status-green' };
+  const getStatusBadge = (status: string, print_status?: string) => {
+    if (status === 'LOCKED' && print_status === 'PRINTED') return 'bg-status-green-dim text-status-green';
+    const map: Record<string, string> = { LOCKED: 'bg-status-yellow-dim text-status-yellow', PRINTED: 'bg-status-green-dim text-status-green', QR_GENERATED: 'bg-status-green-dim text-status-green', DINA_INSERTED: 'bg-status-blue-dim text-status-blue', EXPORTED: 'bg-status-purple-dim text-status-purple', CREATED: 'bg-status-yellow-dim text-status-yellow', ISSUED: 'bg-status-green-dim text-status-green', SHIPPED: 'bg-status-purple-dim text-status-purple' };
     return map[status] || 'bg-status-yellow-dim text-status-yellow';
   };
 
-  const getStatusLabel = (status: string) => {
-    const map: Record<string, string> = { CREATED: '생성됨', DINA_INSERTED: 'DINA삽입', QR_GENERATED: 'QR생성', EXPORTED: '출고됨', ISSUED: '발급완료' };
+  const getStatusLabel = (status: string, print_status?: string) => {
+    if (status === 'LOCKED' && print_status === 'PRINTED') return 'PRINTED';
+    const map: Record<string, string> = { LOCKED: 'LOCKED', PRINTED: 'PRINTED', CREATED: '생성됨', DINA_INSERTED: 'DINA삽입', QR_GENERATED: 'QR생성', EXPORTED: '출고됨', ISSUED: '발급완료', SHIPPED: '출고됨' };
     return map[status] || status;
   };
 
@@ -151,9 +153,8 @@ export default function AssetsPage() {
             </select>
             <select value={filters.status} onChange={(e) => handleFilterChange({ ...filters, status: e.target.value })} className="px-4 py-2 bg-geo-card border border-geo-border rounded-lg text-txt-secondary text-sm focus:ring-2 focus:ring-status-purple/40 outline-none">
               <option value="">전체 상태</option>
-              <option value="CREATED">생성됨</option>
-              <option value="DINA_INSERTED">DINA삽입</option>
-              <option value="QR_GENERATED">QR생성</option>
+              <option value="LOCKED">LOCKED</option>
+              <option value="PRINTED">PRINTED</option>
               <option value="EXPORTED">출고됨</option>
               <option value="ISSUED">발급완료</option>
             </select>
@@ -178,7 +179,7 @@ export default function AssetsPage() {
                       <td className="px-6 py-4 text-center font-mono text-sm text-txt-primary">{a.edition ? String(a.edition).padStart(5, '0') : '-'}</td>
                       <td className="px-6 py-4 text-center font-mono text-sm text-status-blue hover:underline">{a.dina_id}</td>
                       <td className="px-6 py-4 text-center font-mono text-sm text-txt-secondary">{a.otp_code || '-'}</td>
-                      <td className="px-6 py-4 text-center"><span className={`px-2 py-1 rounded text-xs font-medium ${getStatusBadge(a.status)}`}>{getStatusLabel(a.status)}</span></td>
+                      <td className="px-6 py-4 text-center"><span className={`px-2 py-1 rounded text-xs font-medium ${getStatusBadge(a.status, a.print_status)}`}>{getStatusLabel(a.status, a.print_status)}</span></td>
                     </tr>
                   ))}
                   {!assets.length && <tr><td colSpan={4} className="px-6 py-8 text-center text-txt-muted">자산이 없습니다</td></tr>}
@@ -266,7 +267,7 @@ export default function AssetsPage() {
               </div>
               <div>
                 <p className="text-xs text-txt-muted uppercase tracking-wider mb-1">상태</p>
-                <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${getStatusBadge(selectedAsset.status)}`}>{getStatusLabel(selectedAsset.status)}</span>
+                <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${getStatusBadge(selectedAsset.status, selectedAsset.print_status)}`}>{getStatusLabel(selectedAsset.status, selectedAsset.print_status)}</span>
               </div>
             </div>
           </div>

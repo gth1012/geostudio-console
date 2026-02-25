@@ -2,6 +2,7 @@ import { useState, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../services/api';
 import { useToastStore } from '../stores/toast.store';
+import { useAuthStore } from '../stores/auth.store';
 
 export default function UsersPage() {
   const [showModal, setShowModal] = useState(false);
@@ -11,6 +12,8 @@ export default function UsersPage() {
   const dragOffset = useRef({ x: 0, y: 0 });
   const queryClient = useQueryClient();
   const toast = useToastStore();
+  const currentUser = useAuthStore((s) => s.user);
+  const isSuperAdmin = currentUser?.role === 'super_admin';
 
   const { data: users, isLoading } = useQuery({ queryKey: ['users'], queryFn: () => api.get('/users').then((res) => res.data.data) });
 
@@ -26,7 +29,7 @@ export default function UsersPage() {
   const handleMouseUp = () => { if (isDragging) setIsDragging(false); };
 
   const getRoleBadge = (role: string) => {
-    const map: Record<string, string> = { STUDIO_ADMIN: 'bg-status-red-dim text-status-red', STUDIO_OPERATOR: 'bg-status-blue-dim text-status-blue', STUDIO_VIEWER: 'bg-status-yellow-dim text-status-yellow' };
+    const map: Record<string, string> = { super_admin: 'bg-status-red-dim text-status-red', STUDIO_ADMIN: 'bg-status-red-dim text-status-red', agency_admin: 'bg-status-purple-dim text-status-purple', ops_admin: 'bg-status-blue-dim text-status-blue', STUDIO_OPERATOR: 'bg-status-blue-dim text-status-blue', viewer: 'bg-status-yellow-dim text-status-yellow', STUDIO_VIEWER: 'bg-status-yellow-dim text-status-yellow' };
     return map[role] || 'bg-status-yellow-dim text-status-yellow';
   };
 
@@ -34,7 +37,7 @@ export default function UsersPage() {
     <div className="animate-fade-in">
       <div className="flex justify-between items-center mb-6">
         <div />
-        <button onClick={() => { setModalPos({ x: 0, y: 0 }); setShowModal(true); }} className="px-4 py-2 bg-status-purple text-white rounded-lg hover:bg-status-purple/80 text-sm font-medium transition-all">+ 새 사용자</button>
+        {isSuperAdmin && <button onClick={() => { setModalPos({ x: 0, y: 0 }); setShowModal(true); }} className="px-4 py-2 bg-status-purple text-white rounded-lg hover:bg-status-purple/80 text-sm font-medium transition-all">+ 새 사용자</button>}
       </div>
 
       {isLoading ? <p className="text-txt-secondary">로딩 중...</p> : (
@@ -64,7 +67,7 @@ export default function UsersPage() {
       )}
 
       {showModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-start justify-center pt-20 px-4 pb-4" onMouseMove={handleMouseMove} onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp}>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center px-4 pb-4" onMouseMove={handleMouseMove} onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp}>
           <div className="bg-geo-card border border-geo-border rounded-xl w-full max-w-sm flex flex-col cursor-move select-none" style={{ maxHeight: '85vh', transform: `translate(${modalPos.x}px, ${modalPos.y}px)` }} onMouseDown={handleMouseDown}>
             <div className="bg-geo-main px-6 py-3 border-b border-geo-border rounded-t-xl flex-shrink-0">
               <h2 className="text-lg font-semibold text-txt-primary">새 사용자 생성</h2>
