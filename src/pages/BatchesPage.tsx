@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+﻿import { useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../services/api';
@@ -93,7 +93,7 @@ export default function BatchesPage() {
       setShowModal(false);
       setSeriesId('');
       setRows([]);
-      toast.show(`${rows.length}개 자산이 생성되었습니다`, 'success');
+      toast.show(`${rows.length}개 작업이 생성되었습니다`, 'success');
     } catch (err: any) {
       toast.show(err.response?.data?.message || '자산 생성 실패', 'error');
     } finally {
@@ -238,7 +238,7 @@ export default function BatchesPage() {
                   <td className="px-3 py-3 text-center">
                     <div className="flex justify-center gap-1">
                       <button onClick={() => navigate(`/batches/${b.batch_id}`)}
-                        className="w-12 px-1 py-1 text-xs bg-status-purple text-white rounded hover:bg-status-purple/80 transition-all">생성</button>
+                        className="w-12 px-1 py-1 text-xs bg-status-purple text-white rounded hover:bg-status-purple/80 transition-all">{b.status === 'DRAFT' ? '생성' : '상세'}</button>
                       <button disabled={b.status !== 'DRAFT'} onClick={() => setDeleteTarget({ batch_id: b.batch_id, name: b.display_id || b.batch_id })}
                         className="w-12 px-1 py-1 text-xs bg-status-red-dim text-status-red rounded hover:bg-status-red/20 disabled:opacity-30 disabled:cursor-not-allowed transition-all">삭제</button>
                     </div>

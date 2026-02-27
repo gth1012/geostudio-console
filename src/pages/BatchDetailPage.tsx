@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+﻿import { useState, useRef, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../services/api';
@@ -70,10 +70,10 @@ export default function BatchDetailPage() {
       queryClient.invalidateQueries({ queryKey: ['batches'] });
       setShowAssetModal(false);
       setSelectedBatches(new Set());
-      toast.show('자산 생성 완료 (이제 Print 실행 가능)', 'success');
+      toast.show('자산 생성 완료 (이제 지오코드 생성 가능)', 'success');
     },
     onError: (err: any) => {
-      toast.show(err.response?.data?.message || 'Print 실행 실패', 'error');
+      toast.show(err.response?.data?.message || '지오코드 생성 실패', 'error');
     },
   });
 
@@ -97,10 +97,10 @@ export default function BatchDetailPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['batch', id] });
-      toast.show('Print 작업이 큐에 등록되었습니다', 'success');
+      toast.show('지오코드 생성이 시작되었습니다', 'success');
     },
     onError: (err: any) => {
-      toast.show(err.response?.data?.message || 'Print 실행 실패', 'error');
+      toast.show(err.response?.data?.message || '지오코드 생성 실패', 'error');
     },
   });
 
@@ -203,7 +203,7 @@ export default function BatchDetailPage() {
             <button
               onClick={() => lockReferenceMutation.mutate(batch.batch_id)}
               disabled={lockReferenceMutation.isPending}
-              className="px-2 py-1 text-xs font-medium bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 transition-all"
+              className="px-2 py-1 text-xs font-medium bg-status-purple text-white rounded hover:bg-status-purple/80 disabled:opacity-50 transition-all"
             >
               {lockReferenceMutation.isPending ? '확정 중..' : '기준 확정'}
             </button>
@@ -219,7 +219,7 @@ export default function BatchDetailPage() {
           {batch.status === 'DRAFT' ? (
             <button onClick={() => { setModalPos({ x: 0, y: 0 }); setShowAssetModal(true); }} className="px-4 py-2 bg-status-purple text-white rounded-lg hover:bg-status-purple/80 text-sm font-medium transition-all">+ 자산 생성</button>
           ) : batch.status === 'LOCKED' ? (
-            <button onClick={() => printMutation.mutate(batch.batch_id)} disabled={printMutation.isPending} className="px-4 py-2 bg-status-purple text-white rounded-lg hover:bg-status-purple/80 disabled:opacity-50 transition-all">{printMutation.isPending ? 'Print 중..' : 'Print 실행'}</button>
+            <button onClick={() => printMutation.mutate(batch.batch_id)} disabled={printMutation.isPending} className="px-4 py-2 bg-status-purple text-white rounded-lg hover:bg-status-purple/80 disabled:opacity-50 transition-all">{printMutation.isPending ? '지오코드 생성 중..' : '지오코드 생성'}</button>
           ) : (
             <span className="px-4 py-2 bg-status-green text-white rounded-lg text-sm font-medium">확정</span>
           )}

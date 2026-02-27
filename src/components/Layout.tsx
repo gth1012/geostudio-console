@@ -27,17 +27,6 @@ const getRoleBasedMenuItems = (role: string | undefined) => {
       ],
     },
     {
-      section: '에이전시',
-      items: [
-        { path: '/distributions', label: '배포 관리', icon: (
-          <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
-        )},
-        { path: '/activations', label: '정품 등록', icon: (
-          <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22,4 12,14.01 9,11.01"/></svg>
-        )},
-      ],
-    },
-    {
       section: '관리',
       items: [
         { path: '/users', label: '사용자 관리', icon: (
@@ -59,33 +48,17 @@ const getRoleBasedMenuItems = (role: string | undefined) => {
   ];
 
   if (role === 'agency_admin') {
-      return [
-      {
-        section: '메인',
-        items: [
-          { path: '/', label: '대시보드', icon: (
-            <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      return [{
+        section: '안내',
+        items: [{
+          path: '/', label: 'Agency Console로 이동하세요', icon: (
+            <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15,3 21,3 21,9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
           )},
-        ],
-      },
-      {
-        section: '기능',
-        items: [
-          { path: '/exports', label: '출고 관리', icon: (
-            <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>
-          )},
-          { path: '/distributions', label: 'QR 발송 관리', icon: (
-            <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
-          )},
-          { path: '/activations', label: '정품 등록', icon: (
-            <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22,4 12,14.01 9,11.01"/></svg>
-          )},
-        ],
-      },
-    ];
-  }
+        ]
+      }];
+    }
 
-  return allMenuItems;
+    return allMenuItems;
 };
 
 export default function Layout() {
@@ -183,6 +156,9 @@ export default function Layout() {
     </div>
   );
 }
+
+
+
 
 
 
