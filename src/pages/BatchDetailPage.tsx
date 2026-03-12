@@ -1,4 +1,4 @@
-﻿import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../services/api';
@@ -35,6 +35,22 @@ export default function BatchDetailPage() {
     },
     enabled: !!id,
     refetchInterval: 5000,
+  });
+
+  // 지오코드 생성 진행률 조회 (PRINTED가 아닐 때만 폴링)
+  const { data: progress } = useQuery({
+    queryKey: ['print-progress', id],
+    queryFn: async () => {
+      const res = await api.get(`/print/batch/${id}/progress`);
+      const data = res.data.data;
+      // 100% 도달 시 batch 쿼리 invalidate → 상태 자동 갱신
+      if (data.percent === 100) {
+        queryClient.invalidateQueries({ queryKey: ['batch', id] });
+      }
+      return data;
+    },
+    enabled: !!id && (batch?.status === 'LOCKED' || batch?.status === 'PRINTING'),
+    refetchInterval: batch?.status !== 'PRINTED' ? 3000 : false,
   });
 
   // 같은 시리즈의 모든 배치 목록 조회
@@ -89,18 +105,19 @@ export default function BatchDetailPage() {
     },
   });
 
+  // 재시도 전용 - PRINT_FAILED 상태일 때만 노출
   const printMutation = useMutation({
     mutationFn: (batchId: string) => {
       const url = `/print/batch/${batchId}/prepare-and-print`;
-      console.log('[Print] POST', url);
+      console.log('[Print Retry] POST', url);
       return api.post(url);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['batch', id] });
-      toast.show('지오코드 생성이 시작되었습니다', 'success');
+      toast.show('지오코드 생성 재시도가 시작되었습니다', 'success');
     },
     onError: (err: any) => {
-      toast.show(err.response?.data?.message || '지오코드 생성 실패', 'error');
+      toast.show(err.response?.data?.message || '지오코드 생성 재시도 실패', 'error');
     },
   });
 
@@ -167,7 +184,11 @@ export default function BatchDetailPage() {
       FAILED:'실패',
       LOCKED:'확정',
       CREATED:'생성됨',
-      PROCESSING:'처리중'
+      PROCESSING:'처리중',
+      PRINTING:'지오코드 생성중',
+      PRINTED:'지오코드 완료',
+      PRINT_FAILED:'생성 실패',
+      PURGED:'보관완료',
     };
     return map[status] || 'bg-status-yellow-dim text-status-yellow';
   };
@@ -181,9 +202,72 @@ export default function BatchDetailPage() {
       FAILED:'실패',
       LOCKED:'확정',
       CREATED:'생성됨',
-      PROCESSING:'처리중'
+      PROCESSING:'처리중',
+      PRINTING:'지오코드 생성중',
+      PRINTED:'지오코드 완료',
+      PRINT_FAILED:'생성 실패',
+      PURGED:'보관완료',
     };
     return map[status] || status;
+  };
+
+  // 우측 상단 버튼 렌더링
+  const renderActionButton = () => {
+    if (!batch) return null;
+
+    // PRINT_FAILED: 재시도 버튼 (노란색 - 실행대기)
+    if (batch.status === 'PRINT_FAILED') {
+      return (
+        <button
+          onClick={() => printMutation.mutate(batch.batch_id)}
+          disabled={printMutation.isPending}
+          className="px-4 py-2 bg-status-yellow text-geo-deep rounded-lg hover:bg-status-yellow/80 disabled:opacity-50 text-sm font-medium transition-all"
+        >
+          {printMutation.isPending ? '생성 중..' : '지오코드 생성 재시도'}
+        </button>
+      );
+    }
+
+    // DRAFT: 자산 생성 모달 (보라색 - 네비게이션)
+    if (batch.status === 'DRAFT') {
+      return (
+        <button
+          onClick={() => { setModalPos({ x: 0, y: 0 }); setShowAssetModal(true); }}
+          className="px-4 py-2 bg-status-purple text-white rounded-lg hover:bg-status-purple/80 text-sm font-medium transition-all"
+        >
+          + 코드 생성
+        </button>
+      );
+    }
+
+    // LOCKED / PRINTING: 자동 진행 중 안내
+    if (batch.status === 'LOCKED' || batch.status === 'PRINTING') {
+      return (
+        <span className="px-4 py-2 bg-status-yellow-dim text-status-yellow rounded-lg text-sm font-medium">
+          지오코드 생성 중..
+        </span>
+      );
+    }
+
+    // PRINTED: 출고 가능 안내 (초록색 - 완료)
+    if (batch.status === 'PRINTED') {
+      return (
+        <span className="px-4 py-2 bg-status-green-dim text-status-green rounded-lg text-sm font-medium">
+          지오코드 생성완료
+        </span>
+      );
+    }
+
+    // SHIPPED / PURGED
+    if (batch.status === 'SHIPPED' || batch.status === 'PURGED') {
+      return (
+        <span className="px-4 py-2 bg-status-green text-white rounded-lg text-sm font-medium">
+          출고완료
+        </span>
+      );
+    }
+
+    return null;
   };
 
   if (batchLoading) return <p className="text-txt-secondary">로딩 중..</p>;
@@ -193,7 +277,7 @@ export default function BatchDetailPage() {
     <div className="animate-fade-in">
       <div className="flex justify-between items-center mb-6">
         <div className="flex items-center gap-4">
-          <button onClick={() => navigate('/batches')} className="px-3 py-2 text-sm border border-geo-border text-txt-secondary rounded-lg hover:text-txt-primary hover:border-geo-border-hover transition-all">← 목록</button>
+          <button onClick={() => navigate('/batches')} className="px-3 py-2 text-sm border border-status-yellow bg-status-yellow-dim text-status-yellow rounded-lg hover:opacity-80 transition-all">← 목록</button>
           <h1 className="text-xl font-semibold text-txt-primary">{batch.display_id || batch.batch_id}</h1>
           <span className={`px-3 py-1 rounded text-xs font-medium ${getStatusBadge(batch.status)}`}>{getStatusLabel(batch.status)}</span>
           <span className={`px-2 py-1 rounded text-xs font-medium ${batch.batch_reference_status === 'LOCKED' ? 'bg-status-green-dim text-status-green' : 'bg-status-yellow-dim text-status-yellow'}`}>
@@ -216,15 +300,30 @@ export default function BatchDetailPage() {
           {batch.batch_locked_until && new Date(batch.batch_locked_until) > new Date() && (
             <button onClick={() => setShowUnlockConfirm(true)} className="px-4 py-2 bg-status-yellow text-geo-deep rounded-lg hover:bg-status-yellow/80 text-sm font-medium transition-all">잠금 해제</button>
           )}
-          {batch.status === 'DRAFT' ? (
-            <button onClick={() => { setModalPos({ x: 0, y: 0 }); setShowAssetModal(true); }} className="px-4 py-2 bg-status-purple text-white rounded-lg hover:bg-status-purple/80 text-sm font-medium transition-all">+ 자산 생성</button>
-          ) : batch.status === 'LOCKED' ? (
-            <button onClick={() => printMutation.mutate(batch.batch_id)} disabled={printMutation.isPending} className="px-4 py-2 bg-status-purple text-white rounded-lg hover:bg-status-purple/80 disabled:opacity-50 transition-all">{printMutation.isPending ? '지오코드 생성 중..' : '지오코드 생성'}</button>
-          ) : (
-            <span className="px-4 py-2 bg-status-green text-white rounded-lg text-sm font-medium">확정</span>
-          )}
+          {renderActionButton()}
         </div>
       </div>
+
+      {/* 지오코드 생성 진행률 바 */}
+      {(batch.status === 'LOCKED' || batch.status === 'PRINTING') && progress && (
+        <div className="bg-geo-card border border-geo-border rounded-xl p-6 mb-6">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium text-txt-primary">지오코드 생성 중...</span>
+            <span className={`text-sm font-mono ${progress.percent === 100 ? 'text-status-green' : 'text-status-yellow'}`}>
+              {progress.printed}/{progress.total} ({progress.percent}%)
+            </span>
+          </div>
+          <div className="w-full h-3 bg-geo-main rounded-full overflow-hidden">
+            <div
+              className={`h-full ${progress.percent === 100 ? 'bg-status-green' : 'bg-status-yellow'} rounded-full transition-all duration-[2500ms] ease-linear`}
+              style={{ width: `${progress.percent}%` }}
+            />
+          </div>
+          {progress.failed > 0 && (
+            <p className="text-xs text-status-red mt-2">실패: {progress.failed}개</p>
+          )}
+        </div>
+      )}
 
       <div className="bg-geo-card border border-geo-border rounded-xl p-6 mb-6">
         <h2 className="text-sm font-semibold text-txt-primary mb-4">자산 정보</h2>
@@ -286,7 +385,7 @@ export default function BatchDetailPage() {
       {/* 잠금 해제 확인 모달 */}
       {showUnlockConfirm && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center">
-          <div className="bg-geo-card border border-geo-border rounded-xl w-full max-w-sm p-6">
+          <div className="bg-geo-card border border-geo-border rounded-xl w-full max-w-sm p-6 overflow-y-auto" style={{ maxHeight: '85vh' }}>
             <h3 className="text-base font-semibold text-txt-primary mb-2">자산 잠금 해제</h3>
             <p className="text-sm text-txt-secondary mb-2">이 자산의 이상 감지 잠금을 해제합니다</p>
             {batch.lock_reason && (
@@ -307,8 +406,8 @@ export default function BatchDetailPage() {
 
       {/* 자산 생성 모달 */}
       {showAssetModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center px-4" onMouseMove={handleMouseMove} onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp}>
-          <div className="bg-geo-card border border-geo-border rounded-xl w-full max-w-md flex flex-col cursor-move select-none" style={{ maxHeight: '85vh', transform: `translate(${modalPos.x}px, ${modalPos.y}px)` }} onMouseDown={handleMouseDown}>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-start justify-center pt-8" onMouseMove={handleMouseMove} onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp}>
+          <div className="bg-geo-card border border-geo-border rounded-xl w-full max-w-md flex flex-col cursor-move select-none overflow-y-auto" style={{ maxHeight: '85vh', transform: `translate(${modalPos.x}px, ${modalPos.y}px)` }} onMouseDown={handleMouseDown}>
             {/* 상단: 시리즈 배치 정보 */}
             <div className="bg-geo-main px-6 py-3 border-b border-geo-border rounded-t-xl flex-shrink-0">
               <h2 className="text-lg font-semibold text-txt-primary">자산 생성</h2>
