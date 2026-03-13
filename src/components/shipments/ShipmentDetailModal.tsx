@@ -62,6 +62,7 @@ export default function ShipmentDetailModal({ shipmentId, onClose }: ShipmentDet
   const { data: shipment, isLoading } = useQuery({
     queryKey: ['shipment', shipmentId],
     queryFn: () => api.get(`/shipments/${shipmentId}`).then(res => res.data as Shipment),
+    refetchInterval: (query) => query.state.data?.status === 'DRAFT' ? 3000 : false,
   });
 
   const { data: seriesList } = useQuery({
