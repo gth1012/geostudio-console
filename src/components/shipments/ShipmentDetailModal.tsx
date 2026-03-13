@@ -7,7 +7,7 @@ import { useToastStore } from '../../stores/toast.store';
 interface ShipmentAsset {
   asset_id: string;
   file_name: string;
-  file_sha256: string;
+  file_sha256: string | null;
   asset?: {
     dina_id: string;
     edition: number;
@@ -20,7 +20,7 @@ interface Shipment {
   series_id: string;
   asset_count: number;
   status: string;
-  zip_sha256: string;
+  zip_sha256: string | null;
   zip_size: number;
   created_at: string;
   shipped_at?: string;
@@ -51,6 +51,8 @@ export default function ShipmentDetailModal({ shipmentId, onClose }: ShipmentDet
   const queryClient = useQueryClient();
   const toast = useToastStore();
 
+  const [showVoidInput, setShowVoidInput] = useState(false);
+  const [voidReason, setVoidReason] = useState('');
   const [showConfirmModal, setShowConfirmModal] = useState(false);
 
   const [modalPos, setModalPos] = useState({ x: 0, y: 0 });
@@ -60,6 +62,7 @@ export default function ShipmentDetailModal({ shipmentId, onClose }: ShipmentDet
   const { data: shipment, isLoading } = useQuery({
     queryKey: ['shipment', shipmentId],
     queryFn: () => api.get(`/shipments/${shipmentId}`).then(res => res.data as Shipment),
+    refetchInterval: (query) => query.state.data?.status === 'DRAFT' ? 3000 : false,
   });
 
   const { data: seriesList } = useQuery({
@@ -82,6 +85,33 @@ export default function ShipmentDetailModal({ shipmentId, onClose }: ShipmentDet
       toast.show(err.response?.data?.message || '출고 확인 실패', 'error');
     },
   });
+
+  const voidMutation = useMutation({
+    mutationFn: (reason: string) => api.patch(`/shipments/${shipmentId}/void`, { voidReason: reason }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['shipments'] });
+      queryClient.invalidateQueries({ queryKey: ['shipment', shipmentId] });
+      toast.show('출고가 무효화되었습니다', 'success');
+      setShowVoidInput(false);
+    },
+    onError: (err: any) => {
+      toast.show(err.response?.data?.message || '무효화 실패', 'error');
+    },
+  });
+
+  const handleDownload = async () => {
+    try {
+      const res = await api.get(`/shipments/${shipmentId}/download`);
+      const link = document.createElement('a');
+      link.href = res.data.downloadUrl;
+      link.download = `${shipment?.display_id || 'shipment'}.zip`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (err: any) {
+      toast.show(err.response?.data?.message || '다운로드 URL 생성 실패', 'error');
+    }
+  };
 
   const handleMouseDown = (e: React.MouseEvent) => {
     const tag = (e.target as HTMLElement).tagName;
@@ -107,6 +137,7 @@ export default function ShipmentDetailModal({ shipmentId, onClose }: ShipmentDet
 
   const getStatusBadge = (status: string) => {
     const map: Record<string, string> = {
+      DRAFT: 'bg-status-gray-dim text-status-gray',
       READY: 'bg-status-yellow-dim text-status-yellow',
       SHIPPED: 'bg-status-green-dim text-status-green',
       VOID: 'bg-status-red-dim text-status-red',
@@ -116,6 +147,7 @@ export default function ShipmentDetailModal({ shipmentId, onClose }: ShipmentDet
 
   const getStatusLabel = (status: string) => {
     const map: Record<string, string> = {
+      DRAFT: 'ZIP 생성 중',
       READY: '준비완료',
       SHIPPED: '출고완료',
       VOID: '무효',
@@ -208,7 +240,7 @@ export default function ShipmentDetailModal({ shipmentId, onClose }: ShipmentDet
         style={{ maxHeight: '90vh', transform: `translate(${modalPos.x}px, ${modalPos.y}px)` }}
         onMouseDown={handleMouseDown}
       >
-        {/* Header - 상태 배지 없음 */}
+        {/* Header */}
         <div className="bg-geo-main px-6 py-4 border-b border-geo-border rounded-t-xl flex-shrink-0 flex items-center justify-between">
           <h2 className="text-lg font-semibold text-txt-primary">{shipment.display_id}</h2>
           <button onClick={onClose} className="text-txt-muted hover:text-txt-primary text-xl">×</button>
@@ -275,7 +307,7 @@ export default function ShipmentDetailModal({ shipmentId, onClose }: ShipmentDet
                       <tr key={sa.asset_id} className="border-b border-geo-border/50 last:border-0">
                         <td className="px-4 py-2 text-txt-primary font-mono">{sa.asset?.dina_id || '-'}</td>
                         <td className="px-4 py-2 text-txt-secondary text-xs">{sa.file_name}</td>
-                        <td className="px-4 py-2 text-txt-muted font-mono text-xs">{sa.file_sha256.substring(0, 12)}...</td>
+                        <td className="px-4 py-2 text-txt-muted font-mono text-xs">{sa.file_sha256 ? `${sa.file_sha256.substring(0, 12)}...` : '-'}</td>
                         <td className="px-4 py-2 text-center">{sa.asset?.edition === 1 ? <span className="text-status-purple font-medium">{sa.asset.edition}</span> : <span className="text-status-yellow font-medium">{sa.asset?.edition ?? '-'}</span>}</td>
                       </tr>
                     ))}
@@ -285,17 +317,8 @@ export default function ShipmentDetailModal({ shipmentId, onClose }: ShipmentDet
             </div>
           )}
 
-          {/* SHIPPED 상태 배지 - 하단 */}
-          {shipment.status === 'SHIPPED' && (
-            <div className="mt-4 flex justify-center">
-              <span className={`px-4 py-2 rounded-lg text-sm font-medium ${getStatusBadge(shipment.status)}`}>
-                {getStatusLabel(shipment.status)}
-              </span>
-            </div>
-          )}
-
-          {/* VOID 상태 배지 - 하단 */}
-          {shipment.status === 'VOID' && (
+          {/* 상태 배지 - 하단 */}
+          {(shipment.status === 'SHIPPED' || shipment.status === 'VOID' || shipment.status === 'DRAFT') && (
             <div className="mt-4 flex justify-center">
               <span className={`px-4 py-2 rounded-lg text-sm font-medium ${getStatusBadge(shipment.status)}`}>
                 {getStatusLabel(shipment.status)}
@@ -307,14 +330,55 @@ export default function ShipmentDetailModal({ shipmentId, onClose }: ShipmentDet
         {/* Footer */}
         <div className="px-6 py-4 border-t border-geo-border flex-shrink-0">
           {shipment.status === 'READY' && (
-            <div className="flex justify-center">
-              <button
-                onClick={() => setShowConfirmModal(true)}
-                className="px-8 py-2 bg-status-yellow-dim text-status-yellow rounded-lg font-medium hover:bg-status-yellow/20 transition-all"
-              >
-                출고 확인
-              </button>
-            </div>
+            <>
+              {showVoidInput ? (
+                <div className="space-y-3">
+                  <input
+                    type="text"
+                    value={voidReason}
+                    onChange={e => setVoidReason(e.target.value)}
+                    placeholder="무효화 사유를 입력하세요"
+                    className="w-full px-4 py-2 bg-geo-main border border-geo-border rounded-lg text-txt-primary placeholder:text-txt-muted focus:outline-none focus:border-status-purple"
+                  />
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setShowVoidInput(false)}
+                      className="flex-1 px-4 py-2 border border-geo-border rounded-lg text-txt-secondary hover:text-txt-primary transition-all"
+                    >
+                      취소
+                    </button>
+                    <button
+                      onClick={() => voidMutation.mutate(voidReason)}
+                      disabled={!voidReason.trim() || voidMutation.isPending}
+                      className="flex-1 px-4 py-2 bg-status-red-dim text-status-red rounded-lg font-medium hover:bg-status-red/20 disabled:opacity-50 transition-all"
+                    >
+                      {voidMutation.isPending ? '처리 중...' : '무효화 확인'}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setShowVoidInput(true)}
+                    className="px-4 py-2 bg-status-red-dim text-status-red rounded-lg font-medium hover:bg-status-red/20 transition-all"
+                  >
+                    무효화
+                  </button>
+                  <button
+                    onClick={handleDownload}
+                    className="flex-1 px-4 py-2 bg-status-yellow-dim text-status-yellow rounded-lg font-medium hover:bg-status-yellow/20 transition-all"
+                  >
+                    다운로드
+                  </button>
+                  <button
+                    onClick={() => setShowConfirmModal(true)}
+                    className="flex-1 px-4 py-2 bg-status-yellow-dim text-status-yellow rounded-lg font-medium hover:bg-status-yellow/20 transition-all"
+                  >
+                    출고 확인
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>
