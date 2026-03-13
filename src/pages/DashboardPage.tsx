@@ -4,7 +4,7 @@ import api from '../services/api';
 export default function DashboardPage() {
   const { data, isLoading, error } = useQuery({
     queryKey: ['dashboard'],
-    queryFn: () => api.get('/api/admin/dashboard').then((res) => res.data),
+    queryFn: () => api.get('/admin/dashboard').then((res) => res.data),
     refetchInterval: 30000,
     staleTime: 20000,
     retry: false,
