@@ -18,8 +18,6 @@ export default function DashboardPage() {
     );
   }
 
-  // 401 에러 시 → AuthLogoutHandler가 /login으로 이동 처리
-  // 그 사이 "로드 실패" 노출 방지 → 빈 화면 유지
   if (error) {
     const status = (error as any)?.response?.status;
     if (status === 401) {
@@ -33,15 +31,15 @@ export default function DashboardPage() {
   }
 
   const cards = [
-    { label: '검증 처리량 (5분)', value: data?.throughput_5min || 0, color: 'blue' },
-    { label: '전체 이벤트', value: data?.total_events || 0, color: 'purple' },
-    { label: '에러율', value: `${data?.error_rate || 0}%`, color: data?.error_rate >= 3 ? 'red' : data?.error_rate >= 1 ? 'yellow' : 'green' },
-    { label: '동기화 지연', value: data?.consumer_lag || 0, color: data?.consumer_lag > 50000 ? 'red' : data?.consumer_lag > 10000 ? 'yellow' : 'green' },
-    { label: '처리 실패', value: data?.deadletter_count || 0, color: data?.deadletter_count > 0 ? 'yellow' : 'green' },
-    { label: '차단 디바이스', value: data?.blocked_devices || 0, color: data?.blocked_devices > 0 ? 'red' : 'green' },
-    { label: 'DB 연결', value: data?.db_connections || 0, color: 'blue' },
-    { label: '허용 기기', value: data?.whitelist_count || 0, color: 'purple' },
-    { label: '정품 등록 (24시간)', value: data?.recent_claims_24h || 0, color: 'blue' },
+    { label: '활성 시리즈', value: data?.active_series || 0, color: 'blue' },
+    { label: '전체 작업', value: data?.total_batches || 0, color: 'purple' },
+    { label: '전체 자산', value: data?.total_assets || 0, color: 'blue' },
+    { label: '출고 가능 (PRINTED)', value: data?.printed_assets || 0, color: 'yellow' },
+    { label: '출고 완료 (SHIPPED)', value: data?.shipped_assets || 0, color: 'purple' },
+    { label: '정품등록 (ACTIVATED)', value: data?.activated_assets || 0, color: 'green' },
+    { label: '전체 출고', value: data?.total_shipments || 0, color: 'blue' },
+    { label: '24시간 생성 자산', value: data?.recent_assets_24h || 0, color: 'purple' },
+    { label: 'GeoCode 생성률', value: `${data?.geocode_rate || 0}%`, color: (data?.geocode_rate ?? 0) >= 80 ? 'green' : (data?.geocode_rate ?? 0) >= 50 ? 'yellow' : 'red' },
   ];
 
   const sloColor = data?.slo_status === 'CRITICAL' ? 'red' : data?.slo_status === 'WARNING' ? 'yellow' : 'green';
