@@ -5,16 +5,16 @@ import api from '../services/api';
 import { useToastStore } from '../stores/toast.store';
 
 const MATERIAL_OPTIONS = [
-  { value: 'paper_art', label: '종이 (아트지/스노우지)', carrier: 'PATTERN' },
-  { value: 'paper_eco', label: '종이 (친환경/FSC)', carrier: 'PATTERN' },
-  { value: 'film', label: '필름 (PET/PVC)', carrier: 'PATTERN' },
-  { value: 'pvc_card', label: 'PVC (카드형)', carrier: 'PATTERN' },
-  { value: 'hologram', label: '특수지 (홀로그램/펄)', carrier: 'PATTERN' },
-  { value: 'fabric', label: '직물', carrier: 'PATTERN' },
-  { value: 'acrylic', label: '아크릴 (UV인쇄)', carrier: 'ENGRAVING' },
-  { value: 'metal', label: '금속', carrier: 'ENGRAVING' },
-  { value: 'ceramic', label: '세라믹 (각인)', carrier: 'ENGRAVING' },
-  { value: 'ceramic_sub', label: '세라믹 (서브리메이션)', carrier: 'PATTERN' },
+  { value: 'photocard_standard', label: '포토카드 - Standard (아트지)', carrier: 'PATTERN' },
+  { value: 'photocard_premium',  label: '포토카드 - Premium (PVC/PETG)',  carrier: 'PATTERN' },
+  { value: 'photocard_special',  label: '포토카드 - Special (홀로그램)',  carrier: 'PATTERN' },
+  { value: 'photocard_eco',      label: '포토카드 - Eco (친환경/FSC)',    carrier: 'PATTERN' },
+  { value: 'acrylic',            label: '아크릴 (UV인쇄)',                carrier: 'ENGRAVING' },
+  { value: 'metal',              label: '금속',                          carrier: 'ENGRAVING' },
+  { value: 'fabric',             label: '직물',                          carrier: 'PATTERN' },
+  { value: 'ceramic_engraving',  label: '세라믹 (각인)',                  carrier: 'ENGRAVING' },
+  { value: 'ceramic_sublimation',label: '세라믹 (서브리메이션)',           carrier: 'PATTERN' },
+  { value: 'film',               label: '필름 (PET/PVC)',                carrier: 'PATTERN' },
 ] as const;
 
 const materialCarrier = (v: string) => MATERIAL_OPTIONS.find(o => o.value === v)?.carrier || 'PATTERN';
@@ -63,7 +63,7 @@ function CreateSeriesModal({ onClose, onSubmit, isPending, modalPos, onMouseDown
   const [selectedDealer, setSelectedDealer] = useState<Dealer | null>(null);
   const [showNewDealer, setShowNewDealer] = useState(false);
   const [newDealer, setNewDealer] = useState({ name: '', contact_email: '', contact_phone: '' });
-  const [form, setForm] = useState<SeriesFormData>({ name: '', description: '', artistName: '', material: 'paper_art' });
+  const [form, setForm] = useState<SeriesFormData>({ name: '', description: '', artistName: '', material: 'photocard_standard' });
   const [artistInput, setArtistInput] = useState('');
   const queryClient = useQueryClient();
   const toast = useToastStore();
@@ -161,11 +161,11 @@ function CreateSeriesModal({ onClose, onSubmit, isPending, modalPos, onMouseDown
                   </div>
                   <button
                     onClick={() => setShowNewDealer(true)}
-                    className="w-full py-2.5 border border-dashed border-geo-border rounded-lg text-xs text-txt-muted hover:border-status-purple hover:text-status-purple transition-all"
+                    className="w-full py-2.5 border border-dashed border-status-yellow rounded-lg text-xs text-status-yellow hover:bg-[#1a1a2e] transition-all"
                   >
                     + 새 기획사 등록
                   </button>
-                  <button onClick={handleSkipDealer} className="w-full text-xs text-txt-muted hover:text-txt-secondary transition-all py-1">
+                  <button onClick={handleSkipDealer} className="w-full text-xs text-status-yellow hover:text-yellow-300 transition-all py-1">
                     기획사 없이 진행 →
                   </button>
                 </>
@@ -283,7 +283,20 @@ function CreateSeriesModal({ onClose, onSubmit, isPending, modalPos, onMouseDown
                   required
                   className="w-full px-4 py-2.5 bg-geo-main border border-geo-border rounded-lg text-txt-primary focus:ring-2 focus:ring-status-purple/40 outline-none"
                 >
-                  {MATERIAL_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                  <optgroup label="── 포토카드 ──">
+                    <option value="photocard_standard">포토카드 - Standard (아트지)</option>
+                    <option value="photocard_premium">포토카드 - Premium (PVC/PETG)</option>
+                    <option value="photocard_special">포토카드 - Special (홀로그램)</option>
+                    <option value="photocard_eco">포토카드 - Eco (친환경/FSC)</option>
+                  </optgroup>
+                  <optgroup label="── 굿즈 ──">
+                    <option value="acrylic">아크릴 (UV인쇄)</option>
+                    <option value="metal">금속</option>
+                    <option value="fabric">직물</option>
+                    <option value="ceramic_engraving">세라믹 (각인)</option>
+                    <option value="ceramic_sublimation">세라믹 (서브리메이션)</option>
+                    <option value="film">필름 (PET/PVC)</option>
+                  </optgroup>
                 </select>
                 <CarrierGuideText material={form.material} />
               </div>
@@ -355,7 +368,20 @@ function EditSeriesModal({ form, setForm, onSubmit, onClose, isPending, modalPos
             <div>
               <label className="block text-xs text-txt-secondary mb-1.5">재질 *</label>
               <select value={form.material} onChange={(e) => setForm({ ...form, material: e.target.value })} className="w-full px-4 py-2.5 bg-geo-main border border-geo-border rounded-lg text-txt-primary focus:ring-2 focus:ring-status-purple/40 outline-none" required>
-                {MATERIAL_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                <optgroup label="── 포토카드 ──">
+                  <option value="photocard_standard">포토카드 - Standard (아트지)</option>
+                  <option value="photocard_premium">포토카드 - Premium (PVC/PETG)</option>
+                  <option value="photocard_special">포토카드 - Special (홀로그램)</option>
+                  <option value="photocard_eco">포토카드 - Eco (친환경/FSC)</option>
+                </optgroup>
+                <optgroup label="── 굿즈 ──">
+                  <option value="acrylic">아크릴 (UV인쇄)</option>
+                  <option value="metal">금속</option>
+                  <option value="fabric">직물</option>
+                  <option value="ceramic_engraving">세라믹 (각인)</option>
+                  <option value="ceramic_sublimation">세라믹 (서브리메이션)</option>
+                  <option value="film">필름 (PET/PVC)</option>
+                </optgroup>
               </select>
               <CarrierGuideText material={form.material} />
             </div>
@@ -383,7 +409,7 @@ export default function SeriesPage() {
   const [showModal, setShowModal] = useState(false);
   const [showTrash, setShowTrash] = useState(false);
   const [editTarget, setEditTarget] = useState<{ series_id: string } | null>(null);
-  const [editForm, setEditForm] = useState<SeriesFormData>({ name: '', code: '', description: '', artistName: '', material: 'paper_art' });
+  const [editForm, setEditForm] = useState<SeriesFormData>({ name: '', code: '', description: '', artistName: '', material: 'photocard_standard' });
   const [confirmModal, setConfirmModal] = useState<{ show: boolean; message: string; subMessage?: string; onConfirm: () => void; confirmBtnClass?: string }>({ show: false, message: '', onConfirm: () => {} });
 
   const [modalPos, setModalPos] = useState({ x: 0, y: 0 });
