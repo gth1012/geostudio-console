@@ -97,7 +97,7 @@ export default function AssetsPage() {
 
   const assets = assetsResponse?.data || [];
   const totalPages = assetsResponse?.meta?.total_pages || 1;
-  const totalCount = assetsResponse?.meta?.total || 0;
+  const _totalCount = assetsResponse?.meta?.total || 0;
 
   useEffect(() => {
     if (assets.length > 0 && !selectedAsset) {
