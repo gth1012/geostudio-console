@@ -79,7 +79,7 @@ export default function AssetsPage() {
 
   // 기획사 목록 조회
   const { data: tenantList } = useQuery({
-    queryKey: ['tenants'],
+    queryKey: ['dealers'],
     queryFn: () => api.get('/dealers').then((res) => res.data?.data || []),
   });
 
@@ -364,6 +364,7 @@ export default function AssetsPage() {
     </div>
   );
 }
+
 
 
 

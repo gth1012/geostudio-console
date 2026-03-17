@@ -39,12 +39,12 @@ export default function ExportsPage() {
   const toast = useToastStore();
 
   const { data: tenantList } = useQuery({
-    queryKey: ['tenants'],
+    queryKey: ['dealers'],
     queryFn: () => api.get('/dealers').then((res) => res.data?.data || []),
   });
 
   const { data: seriesList } = useQuery({
-    queryKey: ['tenants', selectedTenantId, 'series'],
+    queryKey: ['dealers', selectedTenantId, 'series'],
     queryFn: () => api.get(`/dealers/${selectedTenantId}/series`).then((res) => res.data?.data || []),
     enabled: !!selectedTenantId,
   });
@@ -344,5 +344,7 @@ export default function ExportsPage() {
     </div>
   );
 }
+
+
 
 
