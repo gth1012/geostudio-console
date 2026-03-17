@@ -634,7 +634,7 @@ export default function BatchesPage() {
       {/* ── 학습데이터 일괄업로드 모달 ──────────────────────────────── */}
       {showBulkUploadModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center px-4">
-          <div className="bg-geo-card border border-geo-border rounded-xl w-full max-w-lg flex flex-col" style={{ maxHeight: '90vh' }}>
+          <div className="bg-geo-card border border-geo-border rounded-xl w-full max-w-lg flex flex-col overflow-visible" style={{ maxHeight: '90vh' }}>
             {/* 헤더 */}
             <div className="bg-geo-main px-6 py-4 border-b border-geo-border rounded-t-xl flex items-center justify-between flex-shrink-0">
               <div>
