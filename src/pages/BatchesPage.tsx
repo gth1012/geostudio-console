@@ -476,7 +476,7 @@ export default function BatchesPage() {
 
       {/* 일괄 지오코드생성 모달 */}
       {showBulkPrintModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center px-4">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center px-4">
           <div className="bg-geo-card border border-geo-border rounded-xl w-full max-w-md p-6">
             <h3 className="text-base font-semibold text-txt-primary mb-2">일괄 지오코드생성</h3>
             <p className="text-sm text-txt-muted mb-4">선택된 {selectedIds.size}개 작업의 지오코드를 생성합니다.</p>
@@ -633,7 +633,7 @@ export default function BatchesPage() {
 
       {/* ── 학습데이터 일괄업로드 모달 ──────────────────────────────── */}
       {showBulkUploadModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center px-4">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center px-4">
           <div className="bg-geo-card border border-geo-border rounded-xl w-full max-w-lg flex flex-col overflow-visible" style={{ maxHeight: '90vh' }}>
             {/* 헤더 */}
             <div className="bg-geo-main px-6 py-4 border-b border-geo-border rounded-t-xl flex items-center justify-between flex-shrink-0">
