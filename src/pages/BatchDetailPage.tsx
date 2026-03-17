@@ -329,7 +329,7 @@ export default function BatchDetailPage() {
         <h2 className="text-sm font-semibold text-txt-primary mb-4">자산 정보</h2>
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
           <div><p className="text-xs text-txt-muted uppercase tracking-wider mb-1">시리즈</p><p className="font-medium text-txt-primary">{batch.series?.name || '-'}</p></div>
-          <div><p className="text-xs text-txt-muted uppercase tracking-wider mb-1">코드</p><p className="font-medium text-txt-primary font-mono">{batch.series?.code || '-'}</p></div>
+          <div><p className="text-xs text-txt-muted uppercase tracking-wider mb-1">시리즈 ID</p><p className="font-medium text-txt-primary font-mono">{batch.series?.display_id || '-'}</p></div>
           <div><p className="text-xs text-txt-muted uppercase tracking-wider mb-1">총 자산</p><p className="font-medium text-txt-primary font-mono">{batch.items_total || 0}</p></div>
           <div><p className="text-xs text-txt-muted uppercase tracking-wider mb-1">완료</p><p className="font-medium text-status-green font-mono">{printStats?.printed ?? 0}</p></div>
           <div><p className="text-xs text-txt-muted uppercase tracking-wider mb-1">생성일</p><p className="font-medium text-txt-primary">{new Date(batch.created_at).toLocaleDateString()}</p></div>
