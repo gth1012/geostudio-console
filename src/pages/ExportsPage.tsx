@@ -24,7 +24,7 @@ interface Shipment {
     artist_name?: string;
     dealer_name?: string;
   };
-
+}
 export default function ExportsPage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedShipmentId, setSelectedShipmentId] = useState<string | null>(null);
