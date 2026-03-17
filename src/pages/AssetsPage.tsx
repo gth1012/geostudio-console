@@ -80,7 +80,7 @@ export default function AssetsPage() {
   // 기획사 목록 조회
   const { data: tenantList } = useQuery({
     queryKey: ['tenants'],
-    queryFn: () => api.get('/tenants').then((res) => res.data?.data || []),
+    queryFn: () => api.get('/dealers').then((res) => res.data?.data || []),
   });
 
   // 선택된 기획사의 시리즈 목록 조회
@@ -364,3 +364,4 @@ export default function AssetsPage() {
     </div>
   );
 }
+

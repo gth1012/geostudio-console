@@ -40,7 +40,7 @@ export default function ExportsPage() {
 
   const { data: tenantList } = useQuery({
     queryKey: ['tenants'],
-    queryFn: () => api.get('/tenants').then((res) => res.data?.data || []),
+    queryFn: () => api.get('/dealers').then((res) => res.data?.data || []),
   });
 
   const { data: seriesList } = useQuery({
@@ -344,3 +344,4 @@ export default function ExportsPage() {
     </div>
   );
 }
+

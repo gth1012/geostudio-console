@@ -55,7 +55,7 @@ export default function BatchesPage() {
   // 기획사 목록
   const { data: tenantList } = useQuery({
     queryKey: ['tenants'],
-    queryFn: () => api.get('/tenants').then((res) => res.data?.data || []),
+    queryFn: () => api.get('/dealers').then((res) => res.data?.data || []),
   });
 
   // 필터용 시리즈 목록
@@ -520,3 +520,4 @@ export default function BatchesPage() {
     </div>
   );
 }
+
