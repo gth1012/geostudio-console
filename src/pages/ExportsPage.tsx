@@ -22,8 +22,8 @@ interface Shipment {
     name: string;
     code: string;
     artist_name?: string;
+    dealer_name?: string;
   };
-}
 
 export default function ExportsPage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
