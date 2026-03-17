@@ -15,6 +15,7 @@ export default function AssetsPage() {
   const [assetImage, setAssetImage] = useState<string | null>(null);
   const [imageLoading, setImageLoading] = useState(false);
   const [imageType, setImageType] = useState<'source' | 'rendered' | 'none'>('none');
+  const [selectedTenantId, setSelectedTenantId] = useState<string | null>(null);
   const [selectedSeriesId, setSelectedSeriesId] = useState<string | null>(null);
   const dragOffset = useRef({ x: 0, y: 0 });
   const queryClient = useQueryClient();
@@ -76,10 +77,17 @@ export default function AssetsPage() {
 
   const ITEMS_PER_PAGE = 50;
 
-  // 시리즈 목록 조회
+  // 기획사 목록 조회
+  const { data: tenantList } = useQuery({
+    queryKey: ['tenants'],
+    queryFn: () => api.get('/tenants').then((res) => res.data?.data || []),
+  });
+
+  // 선택된 기획사의 시리즈 목록 조회
   const { data: seriesList } = useQuery({
-    queryKey: ['series'],
-    queryFn: () => api.get('/series').then((res) => res.data?.data || res.data || []),
+    queryKey: ['tenants', selectedTenantId, 'series'],
+    queryFn: () => api.get(`/tenants/${selectedTenantId}/series`).then((res) => res.data?.data || []),
+    enabled: !!selectedTenantId,
   });
 
   const { data: assetsResponse, isLoading } = useQuery({
@@ -104,8 +112,16 @@ export default function AssetsPage() {
     }
   }, [assets]);
 
-  // 시리즈 변경 시 페이지 초기화
-  const handleSeriesSelect = (seriesId: string | null) => {
+  const handleTenantSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const tenantId = e.target.value || null;
+    setSelectedTenantId(tenantId);
+    setSelectedSeriesId(null);
+    setCurrentPage(1);
+    setSelectedAsset(null);
+  };
+
+  const handleSeriesSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const seriesId = e.target.value || null;
     setSelectedSeriesId(seriesId);
     setCurrentPage(1);
     setSelectedAsset(null);
@@ -141,42 +157,53 @@ export default function AssetsPage() {
 
   return (
     <div className="animate-fade-in flex">
-      {/* 메인 컨텐츠 */}
       <div className={`flex-1 transition-all duration-300 ${selectedAsset ? 'mr-96' : ''}`}>
 
-        {/* 시리즈 필터 탭 */}
-        <div className="mb-6 overflow-x-auto">
-          <div className="flex gap-2 items-center min-w-max py-1">
-            {/* 전체 탭 */}
-            <button
-              onClick={() => handleSeriesSelect(null)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
-                selectedSeriesId === null
-                  ? 'bg-status-purple text-white'
-                  : 'bg-geo-card border border-geo-border text-txt-secondary hover:text-txt-primary hover:border-status-purple/50'
-              }`}
-            >
-              전체 <span className="ml-1 font-mono text-xs opacity-80">{assetsResponse?.meta?.total || 0}</span>
-            </button>
-
-            {/* 시리즈별 탭 */}
-            {Array.isArray(seriesList) && seriesList.map((s: any) => (
-              <button
-                key={s.series_id}
-                onClick={() => handleSeriesSelect(s.series_id)}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
-                  selectedSeriesId === s.series_id
-                    ? 'bg-status-purple text-white'
-                    : 'bg-geo-card border border-geo-border text-txt-secondary hover:text-txt-primary hover:border-status-purple/50'
-                }`}
-              >
-                {s.name || s.series_name || s.series_id}
-                {s.total_assets !== undefined && (
-                  <span className="ml-1 font-mono text-xs opacity-80">{s.total_assets}</span>
-                )}
-              </button>
+        {/* 기획사 → 시리즈 필터 */}
+        <div className="flex gap-3 items-center mb-6">
+          {/* 기획사 드롭다운 */}
+          <select
+            value={selectedTenantId || ''}
+            onChange={handleTenantSelect}
+            className="px-4 py-2 bg-geo-card border border-geo-border rounded-lg text-sm text-txt-primary focus:ring-2 focus:ring-status-purple/40 outline-none min-w-[160px]"
+          >
+            <option value="">전체 기획사</option>
+            {Array.isArray(tenantList) && tenantList.map((t: any) => (
+              <option key={t.tenant_id} value={t.tenant_id}>
+                {t.name} ({t.series_count}개 시리즈)
+              </option>
             ))}
-          </div>
+          </select>
+
+          {/* 시리즈 드롭다운 */}
+          <select
+            value={selectedSeriesId || ''}
+            onChange={handleSeriesSelect}
+            disabled={!selectedTenantId}
+            className="px-4 py-2 bg-geo-card border border-geo-border rounded-lg text-sm text-txt-primary focus:ring-2 focus:ring-status-purple/40 outline-none min-w-[180px] disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            <option value="">전체 시리즈</option>
+            {Array.isArray(seriesList) && seriesList.map((s: any) => (
+              <option key={s.series_id} value={s.series_id}>
+                {s.name} ({s.asset_count}개)
+              </option>
+            ))}
+          </select>
+
+          {/* 필터 초기화 */}
+          {(selectedTenantId || selectedSeriesId) && (
+            <button
+              onClick={() => { setSelectedTenantId(null); setSelectedSeriesId(null); setCurrentPage(1); setSelectedAsset(null); }}
+              className="px-3 py-2 text-sm text-txt-muted hover:text-txt-primary border border-geo-border rounded-lg hover:border-status-purple/50 transition-all"
+            >
+              초기화
+            </button>
+          )}
+
+          {/* 자산 수 */}
+          <span className="text-sm text-txt-muted ml-auto">
+            총 <span className="text-status-green font-mono font-bold">{assetsResponse?.meta?.total || 0}</span>개
+          </span>
         </div>
 
         {isLoading ? <p className="text-txt-secondary">로딩 중..</p> : (
@@ -206,7 +233,6 @@ export default function AssetsPage() {
               </table>
             </div>
 
-            {/* 빈 상태 안내 */}
             {!assets.length && (
               <div className="mt-4 px-6 py-5 bg-status-purple-dim border border-status-purple/30 rounded-lg text-center">
                 <p className="text-base font-semibold text-txt-primary mb-1">자산이 없습니다.</p>
@@ -216,7 +242,6 @@ export default function AssetsPage() {
               </div>
             )}
 
-            {/* 완료 안내 */}
             {assets.length > 0 && (
               <div className="mt-4 px-6 py-5 bg-status-purple-dim border border-status-purple/30 rounded-lg text-center">
                 <p className="text-base font-semibold text-status-green mb-1">자산 생성 완료!</p>
@@ -224,7 +249,6 @@ export default function AssetsPage() {
               </div>
             )}
 
-            {/* 페이지네이션 */}
             {totalPages > 1 && (
               <div className="flex justify-center items-center gap-1 mt-6">
                 <button onClick={() => setCurrentPage(1)} disabled={currentPage === 1}
@@ -309,7 +333,6 @@ export default function AssetsPage() {
         </div>
       )}
 
-      {/* [HIDDEN] 향후 사용 예정 */}
       {false && showModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-start justify-center pt-20 px-4 pb-4" onMouseMove={handleMouseMove} onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp}>
           <div className="bg-geo-card border border-geo-border rounded-xl w-full max-w-sm flex flex-col cursor-move select-none" style={{ maxHeight: '85vh', transform: `translate(${modalPos.x}px, ${modalPos.y}px)` }} onMouseDown={handleMouseDown}>
