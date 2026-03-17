@@ -15,6 +15,7 @@ export default function AssetsPage() {
   const [assetImage, setAssetImage] = useState<string | null>(null);
   const [imageLoading, setImageLoading] = useState(false);
   const [imageType, setImageType] = useState<'source' | 'rendered' | 'none'>('none');
+  const [selectedSeriesId, setSelectedSeriesId] = useState<string | null>(null);
   const dragOffset = useRef({ x: 0, y: 0 });
   const queryClient = useQueryClient();
   const toast = useToastStore();
@@ -56,7 +57,7 @@ export default function AssetsPage() {
         setImageLoading(false);
         return;
       } catch {
-        // 둘 다 실패
+        // 전부 실패
       }
 
       setAssetImage(null);
@@ -75,12 +76,19 @@ export default function AssetsPage() {
 
   const ITEMS_PER_PAGE = 50;
 
+  // 시리즈 목록 조회
+  const { data: seriesList } = useQuery({
+    queryKey: ['series'],
+    queryFn: () => api.get('/series').then((res) => res.data?.data || res.data || []),
+  });
+
   const { data: assetsResponse, isLoading } = useQuery({
-    queryKey: ['assets', currentPage],
+    queryKey: ['assets', currentPage, selectedSeriesId],
     queryFn: () => {
       const params = new URLSearchParams();
       params.append('page', String(currentPage));
       params.append('limit', String(ITEMS_PER_PAGE));
+      if (selectedSeriesId) params.append('seriesId', selectedSeriesId);
       return api.get(`/assets?${params}`).then((res) => res.data);
     },
   });
@@ -97,13 +105,20 @@ export default function AssetsPage() {
     }
   }, [assets]);
 
+  // 시리즈 변경 시 페이지 초기화
+  const handleSeriesSelect = (seriesId: string | null) => {
+    setSelectedSeriesId(seriesId);
+    setCurrentPage(1);
+    setSelectedAsset(null);
+  };
+
   const pageGroup = Math.floor((currentPage - 1) / 10);
   const startPage = pageGroup * 10 + 1;
   const endPage = Math.min(startPage + 9, totalPages);
 
   const createMutation = useMutation({
     mutationFn: (data: any) => api.post('/assets/bulk', data),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['assets'] }); setShowModal(false); setForm({ batchId: '', seriesId: '', count: '' }); toast.show('자산이 생성되었습니다', 'success'); },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['assets'] }); setShowModal(false); setForm({ batchId: '', seriesId: '', count: '' }); toast.show('자산이 생성됐습니다', 'success'); },
     onError: (err: any) => { toast.show(err.response?.data?.message || '자산 생성 실패', 'error'); },
   });
 
@@ -121,7 +136,7 @@ export default function AssetsPage() {
 
   const getStatusLabel = (status: string, print_status?: string) => {
     if (status === 'LOCKED' && print_status === 'PRINTED') return '출고가능';
-    const map: Record<string, string> = { LOCKED: 'LOCKED', PRINTED: 'PRINTED', CREATED: '생성됨', DINA_INSERTED: 'DINA삽입', QR_GENERATED: 'QR생성', EXPORTED: '출고됨', ISSUED: '발급완료', SHIPPED: '출고됨' };
+    const map: Record<string, string> = { LOCKED: 'LOCKED', PRINTED: 'PRINTED', CREATED: '생성됨', DINA_INSERTED: 'DINA삽입', QR_GENERATED: 'QR생성', EXPORTED: '출고됨', ISSUED: '발행완료', SHIPPED: '출고됨' };
     return map[status] || status;
   };
 
@@ -129,17 +144,43 @@ export default function AssetsPage() {
     <div className="animate-fade-in flex">
       {/* 메인 컨텐츠 */}
       <div className={`flex-1 transition-all duration-300 ${selectedAsset ? 'mr-96' : ''}`}>
-        <div className="flex justify-between items-center mb-6">
-          <div className="flex gap-4 items-center justify-center w-full my-4">
-            <span className="text-base text-status-green font-bold">원본 수량 <span className="text-status-green font-mono font-bold">{batches?.length || 0}개</span></span>
-            <span className="text-txt-muted">|</span>
-            <span className="text-base text-status-green font-bold">총 발행량 <span className="text-status-green font-mono font-bold">{totalCount.toLocaleString()}개</span></span>
+
+        {/* 시리즈 필터 탭 */}
+        <div className="mb-6 overflow-x-auto">
+          <div className="flex gap-2 items-center min-w-max py-1">
+            {/* 전체 탭 */}
+            <button
+              onClick={() => handleSeriesSelect(null)}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
+                selectedSeriesId === null
+                  ? 'bg-status-purple text-white'
+                  : 'bg-geo-card border border-geo-border text-txt-secondary hover:text-txt-primary hover:border-status-purple/50'
+              }`}
+            >
+              전체 <span className="ml-1 font-mono text-xs opacity-80">{assetsResponse?.meta?.total || 0}</span>
+            </button>
+
+            {/* 시리즈별 탭 */}
+            {Array.isArray(seriesList) && seriesList.map((s: any) => (
+              <button
+                key={s.series_id}
+                onClick={() => handleSeriesSelect(s.series_id)}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
+                  selectedSeriesId === s.series_id
+                    ? 'bg-status-purple text-white'
+                    : 'bg-geo-card border border-geo-border text-txt-secondary hover:text-txt-primary hover:border-status-purple/50'
+                }`}
+              >
+                {s.name || s.series_name || s.series_id}
+                {s.total_assets !== undefined && (
+                  <span className="ml-1 font-mono text-xs opacity-80">{s.total_assets}</span>
+                )}
+              </button>
+            ))}
           </div>
-          {/* [HIDDEN] 추후 사용 예정 */}
-          {false && <button onClick={() => { setModalPos({ x: 0, y: 0 }); setShowModal(true); }} className="px-4 py-2 bg-status-purple text-white rounded-lg hover:bg-status-purple/80 text-sm font-medium transition-all">+ 생성</button>}
         </div>
 
-        {isLoading ? <p className="text-txt-secondary">로딩 중...</p> : (
+        {isLoading ? <p className="text-txt-secondary">로딩 중..</p> : (
           <>
             <div className="bg-geo-card border border-geo-border rounded-xl overflow-hidden">
               <table className="w-full">
@@ -166,7 +207,7 @@ export default function AssetsPage() {
               </table>
             </div>
 
-            {/* 빈 상태 배너 */}
+            {/* 빈 상태 안내 */}
             {!assets.length && (
               <div className="mt-4 px-6 py-5 bg-status-purple-dim border border-status-purple/30 rounded-lg text-center">
                 <p className="text-base font-semibold text-txt-primary mb-1">자산이 없습니다.</p>
@@ -176,7 +217,7 @@ export default function AssetsPage() {
               </div>
             )}
 
-            {/* 완료 배너 */}
+            {/* 완료 안내 */}
             {assets.length > 0 && (
               <div className="mt-4 px-6 py-5 bg-status-purple-dim border border-status-purple/30 rounded-lg text-center">
                 <p className="text-base font-semibold text-status-green mb-1">자산 생성 완료!</p>
@@ -269,19 +310,19 @@ export default function AssetsPage() {
         </div>
       )}
 
-      {/* [HIDDEN] 추후 사용 예정 */}
+      {/* [HIDDEN] 향후 사용 예정 */}
       {false && showModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-start justify-center pt-20 px-4 pb-4" onMouseMove={handleMouseMove} onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp}>
           <div className="bg-geo-card border border-geo-border rounded-xl w-full max-w-sm flex flex-col cursor-move select-none" style={{ maxHeight: '85vh', transform: `translate(${modalPos.x}px, ${modalPos.y}px)` }} onMouseDown={handleMouseDown}>
             <div className="bg-geo-main px-6 py-3 border-b border-geo-border rounded-t-xl flex-shrink-0">
-              <h2 className="text-lg font-semibold text-txt-primary">자산 대량 생성</h2>
+              <h2 className="text-lg font-semibold text-txt-primary">자산 신규 생성</h2>
             </div>
             <form onSubmit={handleSubmit} className="p-6 overflow-y-auto">
               <div className="space-y-4">
                 <div>
-                  <label className="block text-xs text-txt-secondary mb-1.5">자산 선택 *</label>
+                  <label className="block text-xs text-txt-secondary mb-1.5">작업 선택 *</label>
                   <select value={form.batchId} onChange={(e) => handleBatchSelect(e.target.value)} className="w-full px-4 py-2.5 bg-geo-main border border-geo-border rounded-lg text-txt-primary focus:ring-2 focus:ring-status-purple/40 outline-none" required>
-                    <option value="">자산을 선택하세요</option>
+                    <option value="">작업을 선택하세요</option>
                     {batches?.map((b: any) => <option key={b.batch_id} value={b.batch_id}>{b.name || `Batch ${b.batch_number}`} ({b.series_name})</option>)}
                   </select>
                 </div>
