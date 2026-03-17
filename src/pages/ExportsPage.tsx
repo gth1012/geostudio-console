@@ -265,7 +265,7 @@ export default function ExportsPage() {
                     {s.display_id}
                   </td>
                   <td className="px-4 py-3 text-txt-secondary text-sm truncate">
-                    {tenantMap[s.dealer_id] || '-'}
+                    {tenantMap[s.tenant_id] || '-'}
                   </td>
                   <td className="px-4 py-3 text-txt-primary text-sm truncate">{s.series?.name || '-'}</td>
                   <td className="px-4 py-3 text-txt-primary text-sm truncate">{s.series?.artist_name || '-'}</td>
@@ -344,6 +344,7 @@ export default function ExportsPage() {
     </div>
   );
 }
+
 
 
 
