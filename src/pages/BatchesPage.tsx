@@ -253,7 +253,7 @@ export default function BatchesPage() {
         >
           <option value="">전체 기획사</option>
           {Array.isArray(tenantList) && tenantList.map((t: any) => (
-            <option key={t.tenant_id} value={t.tenant_id}>{t.name} ({t.series_count}개)</option>
+            <option key={t.dealer_id} value={t.dealer_id}>{t.name} ({t.series_count}개)</option>
           ))}
         </select>
 
@@ -417,7 +417,7 @@ export default function BatchesPage() {
               >
                 <option value="">기획사 선택</option>
                 {Array.isArray(tenantList) && tenantList.map((t: any) => (
-                  <option key={t.tenant_id} value={t.tenant_id}>{t.name}</option>
+                  <option key={t.dealer_id} value={t.dealer_id}>{t.name}</option>
                 ))}
               </select>
               {/* 시리즈 선택 */}
@@ -520,6 +520,8 @@ export default function BatchesPage() {
     </div>
   );
 }
+
+
 
 
 

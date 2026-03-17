@@ -169,7 +169,7 @@ export default function AssetsPage() {
           >
             <option value="">전체 기획사</option>
             {Array.isArray(tenantList) && tenantList.map((t: any) => (
-              <option key={t.tenant_id} value={t.tenant_id}>
+              <option key={t.dealer_id} value={t.dealer_id}>
                 {t.name} ({t.series_count}개 시리즈)
               </option>
             ))}
@@ -364,6 +364,8 @@ export default function AssetsPage() {
     </div>
   );
 }
+
+
 
 
 

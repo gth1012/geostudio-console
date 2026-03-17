@@ -51,7 +51,7 @@ export default function ExportsPage() {
 
   const tenantMap: Record<string, string> = {};
   if (Array.isArray(tenantList)) {
-    tenantList.forEach((t: any) => { tenantMap[t.tenant_id] = t.name; });
+    tenantList.forEach((t: any) => { tenantMap[t.dealer_id] = t.name; });
   }
 
   const { data: shipments, isLoading } = useQuery({
@@ -156,7 +156,7 @@ export default function ExportsPage() {
         >
           <option value="">전체 기획사</option>
           {Array.isArray(tenantList) && tenantList.map((t: any) => (
-            <option key={t.tenant_id} value={t.tenant_id}>
+            <option key={t.dealer_id} value={t.dealer_id}>
               {t.name} ({t.series_count}개 시리즈)
             </option>
           ))}
@@ -265,7 +265,7 @@ export default function ExportsPage() {
                     {s.display_id}
                   </td>
                   <td className="px-4 py-3 text-txt-secondary text-sm truncate">
-                    {tenantMap[s.tenant_id] || '-'}
+                    {tenantMap[s.dealer_id] || '-'}
                   </td>
                   <td className="px-4 py-3 text-txt-primary text-sm truncate">{s.series?.name || '-'}</td>
                   <td className="px-4 py-3 text-txt-primary text-sm truncate">{s.series?.artist_name || '-'}</td>
@@ -344,6 +344,10 @@ export default function ExportsPage() {
     </div>
   );
 }
+
+
+
+
 
 
 
