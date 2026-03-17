@@ -9,6 +9,7 @@ interface Shipment {
   shipment_id: string;
   display_id: string;
   series_id: string;
+  tenant_id: string;
   asset_count: number;
   status: string;
   zip_sha256: string;
@@ -31,16 +32,47 @@ export default function ExportsPage() {
   const [showBulkConfirmModal, setShowBulkConfirmModal] = useState(false);
   const [recipientEmail, setRecipientEmail] = useState('');
   const [isBulkConfirming, setIsBulkConfirming] = useState(false);
+  const [selectedTenantId, setSelectedTenantId] = useState<string | null>(null);
+  const [selectedSeriesId, setSelectedSeriesId] = useState<string | null>(null);
 
   const queryClient = useQueryClient();
   const toast = useToastStore();
 
+  const { data: tenantList } = useQuery({
+    queryKey: ['tenants'],
+    queryFn: () => api.get('/tenants').then((res) => res.data?.data || []),
+  });
+
+  const { data: seriesList } = useQuery({
+    queryKey: ['tenants', selectedTenantId, 'series'],
+    queryFn: () => api.get(`/tenants/${selectedTenantId}/series`).then((res) => res.data?.data || []),
+    enabled: !!selectedTenantId,
+  });
+
+  const tenantMap: Record<string, string> = {};
+  if (Array.isArray(tenantList)) {
+    tenantList.forEach((t: any) => { tenantMap[t.tenant_id] = t.name; });
+  }
+
   const { data: shipments, isLoading } = useQuery({
-    queryKey: ['shipments'],
-    queryFn: () => api.get('/shipments').then(res => res.data as Shipment[]),
+    queryKey: ['shipments', selectedSeriesId],
+    queryFn: () => {
+      const params = new URLSearchParams();
+      if (selectedSeriesId) params.append('seriesId', selectedSeriesId);
+      return api.get(`/shipments?${params}`).then(res => res.data as Shipment[]);
+    },
   });
 
   const readyShipments = shipments?.filter(s => s.status === 'READY') || [];
+
+  const handleTenantSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setSelectedTenantId(e.target.value || null);
+    setSelectedSeriesId(null);
+  };
+
+  const handleSeriesSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setSelectedSeriesId(e.target.value || null);
+  };
 
   const handleSelectOne = (id: string, checked: boolean) => {
     setSelectedIds(prev => {
@@ -115,22 +147,60 @@ export default function ExportsPage() {
   return (
     <div className="animate-fade-in">
 
-      {/* Header */}
-      <div className="flex items-center gap-2 mb-4">
-        <button
-          onClick={() => setShowCreateModal(true)}
-          className="px-4 py-2 bg-status-yellow-dim text-status-yellow rounded-lg font-medium hover:bg-status-yellow/20 transition-all"
+      {/* 기획사 → 시리즈 필터 + 버튼 */}
+      <div className="flex gap-3 items-center mb-4">
+        <select
+          value={selectedTenantId || ''}
+          onChange={handleTenantSelect}
+          className="px-4 py-2 bg-geo-card border border-geo-border rounded-lg text-sm text-txt-primary focus:ring-2 focus:ring-status-purple/40 outline-none min-w-[160px]"
         >
-          출고 생성
-        </button>
-        {selectedIds.size > 0 && (
+          <option value="">전체 기획사</option>
+          {Array.isArray(tenantList) && tenantList.map((t: any) => (
+            <option key={t.tenant_id} value={t.tenant_id}>
+              {t.name} ({t.series_count}개 시리즈)
+            </option>
+          ))}
+        </select>
+
+        <select
+          value={selectedSeriesId || ''}
+          onChange={handleSeriesSelect}
+          disabled={!selectedTenantId}
+          className="px-4 py-2 bg-geo-card border border-geo-border rounded-lg text-sm text-txt-primary focus:ring-2 focus:ring-status-purple/40 outline-none min-w-[180px] disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          <option value="">전체 시리즈</option>
+          {Array.isArray(seriesList) && seriesList.map((s: any) => (
+            <option key={s.series_id} value={s.series_id}>
+              {s.name} ({s.asset_count}개)
+            </option>
+          ))}
+        </select>
+
+        {(selectedTenantId || selectedSeriesId) && (
           <button
-            onClick={() => setShowBulkConfirmModal(true)}
-            className="px-4 py-2 bg-status-green text-white rounded-lg font-medium hover:bg-status-green/80 transition-all"
+            onClick={() => { setSelectedTenantId(null); setSelectedSeriesId(null); }}
+            className="px-3 py-2 text-sm text-txt-muted hover:text-txt-primary border border-geo-border rounded-lg hover:border-status-purple/50 transition-all"
           >
-            ✓ 출고 확정 ({selectedIds.size}건)
+            초기화
           </button>
         )}
+
+        <div className="ml-auto flex gap-2">
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="px-4 py-2 bg-status-yellow-dim text-status-yellow rounded-lg font-medium hover:bg-status-yellow/20 transition-all"
+          >
+            출고 생성
+          </button>
+          {selectedIds.size > 0 && (
+            <button
+              onClick={() => setShowBulkConfirmModal(true)}
+              className="px-4 py-2 bg-status-green text-white rounded-lg font-medium hover:bg-status-green/80 transition-all"
+            >
+              일괄 출고 확정 ({selectedIds.size}건)
+            </button>
+          )}
+        </div>
       </div>
 
       {/* 상태 요약 카드 */}
@@ -152,7 +222,7 @@ export default function ExportsPage() {
       )}
 
       {isLoading ? (
-        <p className="text-txt-secondary">로딩 중...</p>
+        <p className="text-txt-secondary">로딩 중..</p>
       ) : (
         <div className="bg-geo-card border border-geo-border rounded-xl overflow-hidden">
           <table className="w-full table-fixed">
@@ -166,9 +236,9 @@ export default function ExportsPage() {
                     className="w-4 h-4 rounded border-geo-border text-status-purple focus:ring-status-purple/40 bg-geo-main cursor-pointer"
                   />
                 </th>
-                <th className="w-[18%] px-4 py-3 text-left text-xs font-semibold text-status-purple uppercase tracking-wider">ID</th>
-                <th className="w-[10%] px-4 py-3 text-left text-xs font-semibold text-status-purple uppercase tracking-wider">기획사</th>
-                <th className="w-[16%] px-4 py-3 text-left text-xs font-semibold text-status-purple uppercase tracking-wider">시리즈</th>
+                <th className="w-[16%] px-4 py-3 text-left text-xs font-semibold text-status-purple uppercase tracking-wider">ID</th>
+                <th className="w-[12%] px-4 py-3 text-left text-xs font-semibold text-status-purple uppercase tracking-wider">기획사</th>
+                <th className="w-[14%] px-4 py-3 text-left text-xs font-semibold text-status-purple uppercase tracking-wider">시리즈</th>
                 <th className="w-[12%] px-4 py-3 text-left text-xs font-semibold text-status-purple uppercase tracking-wider">아티스트</th>
                 <th className="w-[7%] px-4 py-3 text-center text-xs font-semibold text-status-purple uppercase tracking-wider">수량</th>
                 <th className="w-[9%] px-4 py-3 text-center text-xs font-semibold text-status-purple uppercase tracking-wider">상태</th>
@@ -194,7 +264,9 @@ export default function ExportsPage() {
                   <td className="px-4 py-3 text-txt-primary font-mono text-sm truncate cursor-pointer hover:text-status-purple" onClick={() => setSelectedShipmentId(s.shipment_id)}>
                     {s.display_id}
                   </td>
-                  <td className="px-4 py-3 text-txt-secondary text-sm truncate">-</td>
+                  <td className="px-4 py-3 text-txt-secondary text-sm truncate">
+                    {tenantMap[s.tenant_id] || '-'}
+                  </td>
                   <td className="px-4 py-3 text-txt-primary text-sm truncate">{s.series?.name || '-'}</td>
                   <td className="px-4 py-3 text-txt-primary text-sm truncate">{s.series?.artist_name || '-'}</td>
                   <td className="px-4 py-3 text-txt-primary font-mono text-sm text-center">{s.asset_count?.toLocaleString()}개</td>
@@ -221,12 +293,11 @@ export default function ExportsPage() {
 
       {!shipments?.length && (
         <div className="mt-4 px-6 py-5 bg-status-purple-dim border border-status-purple/30 rounded-lg text-center">
-          <p className="text-base font-semibold text-txt-primary mb-1">출고 기록이 없습니다.</p>
-          <p className="text-sm text-txt-secondary">좌측 상단 <button onClick={() => setShowCreateModal(true)} className="text-status-yellow font-semibold hover:underline">[출고 생성]</button> 버튼으로 첫 출고를 시작하세요.</p>
+          <p className="text-base font-semibold text-txt-primary mb-1">출고 목록이 없습니다.</p>
+          <p className="text-sm text-txt-secondary">상단 <button onClick={() => setShowCreateModal(true)} className="text-status-yellow font-semibold hover:underline">[출고 생성]</button> 버튼으로 첫 출고를 시작하세요.</p>
         </div>
       )}
 
-      {/* 일괄 출고 확정 모달 */}
       {showBulkConfirmModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center px-4">
           <div className="bg-geo-card border border-geo-border rounded-xl w-full max-w-md p-6">
@@ -251,7 +322,7 @@ export default function ExportsPage() {
                 disabled={isBulkConfirming}
                 className="flex-1 px-4 py-2 bg-status-green text-white rounded-lg font-medium hover:bg-status-green/80 disabled:opacity-50 transition-all"
               >
-                {isBulkConfirming ? '처리 중...' : '확정'}
+                {isBulkConfirming ? '처리 중..' : '확정'}
               </button>
             </div>
           </div>
