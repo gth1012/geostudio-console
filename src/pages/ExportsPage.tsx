@@ -45,7 +45,7 @@ export default function ExportsPage() {
 
   const { data: seriesList } = useQuery({
     queryKey: ['tenants', selectedTenantId, 'series'],
-    queryFn: () => api.get(`/tenants/${selectedTenantId}/series`).then((res) => res.data?.data || []),
+    queryFn: () => api.get(`/dealers/${selectedTenantId}/series`).then((res) => res.data?.data || []),
     enabled: !!selectedTenantId,
   });
 
@@ -344,4 +344,5 @@ export default function ExportsPage() {
     </div>
   );
 }
+
 

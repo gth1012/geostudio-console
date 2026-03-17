@@ -85,8 +85,8 @@ export default function AssetsPage() {
 
   // 선택된 기획사의 시리즈 목록 조회
   const { data: seriesList } = useQuery({
-    queryKey: ['tenants', selectedTenantId, 'series'],
-    queryFn: () => api.get(`/tenants/${selectedTenantId}/series`).then((res) => res.data?.data || []),
+    queryKey: ['dealers', selectedTenantId, 'series'],
+    queryFn: () => api.get(`/dealers/${selectedTenantId}/series`).then((res) => res.data?.data || []),
     enabled: !!selectedTenantId,
   });
 
@@ -364,4 +364,6 @@ export default function AssetsPage() {
     </div>
   );
 }
+
+
 

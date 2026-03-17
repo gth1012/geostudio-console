@@ -61,14 +61,14 @@ export default function BatchesPage() {
   // 필터용 시리즈 목록
   const { data: filterSeriesList } = useQuery({
     queryKey: ['tenants', filterTenantId, 'series'],
-    queryFn: () => api.get(`/tenants/${filterTenantId}/series`).then((res) => res.data?.data || []),
+    queryFn: () => api.get(`/dealers/${filterTenantId}/series`).then((res) => res.data?.data || []),
     enabled: !!filterTenantId,
   });
 
   // 작업 생성 모달용 시리즈 목록
   const { data: modalSeriesList } = useQuery({
     queryKey: ['tenants', modalTenantId, 'series'],
-    queryFn: () => api.get(`/tenants/${modalTenantId}/series`).then((res) => res.data?.data || []),
+    queryFn: () => api.get(`/dealers/${modalTenantId}/series`).then((res) => res.data?.data || []),
     enabled: !!modalTenantId,
   });
 
@@ -520,4 +520,5 @@ export default function BatchesPage() {
     </div>
   );
 }
+
 
