@@ -1,0 +1,343 @@
+import { useState, useRef, useEffect } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { QRCodeSVG } from 'qrcode.react';
+import api from '../services/api';
+import { useToastStore } from '../stores/toast.store';
+
+export default function AssetsPage() {
+  const [showModal, setShowModal] = useState(false);
+  const [form, setForm] = useState({ batchId: '', seriesId: '', count: '' });
+
+  const [modalPos, setModalPos] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [selectedAsset, setSelectedAsset] = useState<any>(null);
+  const [assetImage, setAssetImage] = useState<string | null>(null);
+  const [imageLoading, setImageLoading] = useState(false);
+  const [imageType, setImageType] = useState<'source' | 'rendered' | 'none'>('none');
+  const [selectedSeriesId, setSelectedSeriesId] = useState<string | null>(null);
+  const dragOffset = useRef({ x: 0, y: 0 });
+  const queryClient = useQueryClient();
+  const toast = useToastStore();
+
+  useEffect(() => {
+    if (!selectedAsset?.asset_id) {
+      setAssetImage(null);
+      setImageType('none');
+      return;
+    }
+
+    const fetchAssetImage = async () => {
+      setImageLoading(true);
+      setAssetImage(null);
+      setImageType('none');
+
+      try {
+        const res = await api.get(`/assets/${selectedAsset.asset_id}/image-proxy?type=rendered`, {
+          responseType: 'arraybuffer',
+        });
+        const blob = new Blob([res.data], { type: res.headers['content-type'] || 'image/png' });
+        const url = URL.createObjectURL(blob);
+        setAssetImage(url);
+        setImageType('rendered');
+        setImageLoading(false);
+        return;
+      } catch {
+        // rendered 실패, source 시도
+      }
+
+      try {
+        const res = await api.get(`/assets/${selectedAsset.asset_id}/image-proxy?type=source`, {
+          responseType: 'arraybuffer',
+        });
+        const blob = new Blob([res.data], { type: res.headers['content-type'] || 'image/jpeg' });
+        const url = URL.createObjectURL(blob);
+        setAssetImage(url);
+        setImageType('source');
+        setImageLoading(false);
+        return;
+      } catch {
+        // 전부 실패
+      }
+
+      setAssetImage(null);
+      setImageType('none');
+      setImageLoading(false);
+    };
+
+    fetchAssetImage();
+
+    return () => {
+      if (assetImage?.startsWith('blob:')) {
+        URL.revokeObjectURL(assetImage);
+      }
+    };
+  }, [selectedAsset?.asset_id]);
+
+  const ITEMS_PER_PAGE = 50;
+
+  // 시리즈 목록 조회
+  const { data: seriesList } = useQuery({
+    queryKey: ['series'],
+    queryFn: () => api.get('/series').then((res) => res.data?.data || res.data || []),
+  });
+
+  const { data: assetsResponse, isLoading } = useQuery({
+    queryKey: ['assets', currentPage, selectedSeriesId],
+    queryFn: () => {
+      const params = new URLSearchParams();
+      params.append('page', String(currentPage));
+      params.append('limit', String(ITEMS_PER_PAGE));
+      if (selectedSeriesId) params.append('seriesId', selectedSeriesId);
+      return api.get(`/assets?${params}`).then((res) => res.data);
+    },
+  });
+
+  const { data: batches } = useQuery({ queryKey: ['batches'], queryFn: () => api.get('/batches').then((res) => res.data.data) });
+
+  const assets = assetsResponse?.data || [];
+  const totalPages = assetsResponse?.meta?.total_pages || 1;
+
+  useEffect(() => {
+    if (assets.length > 0 && !selectedAsset) {
+      setSelectedAsset(assets[0]);
+    }
+  }, [assets]);
+
+  // 시리즈 변경 시 페이지 초기화
+  const handleSeriesSelect = (seriesId: string | null) => {
+    setSelectedSeriesId(seriesId);
+    setCurrentPage(1);
+    setSelectedAsset(null);
+  };
+
+  const pageGroup = Math.floor((currentPage - 1) / 10);
+  const startPage = pageGroup * 10 + 1;
+  const endPage = Math.min(startPage + 9, totalPages);
+
+  const createMutation = useMutation({
+    mutationFn: (data: any) => api.post('/assets/bulk', data),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['assets'] }); setShowModal(false); setForm({ batchId: '', seriesId: '', count: '' }); toast.show('자산이 생성됐습니다', 'success'); },
+    onError: (err: any) => { toast.show(err.response?.data?.message || '자산 생성 실패', 'error'); },
+  });
+
+  const handleBatchSelect = (batchId: string) => { const batch = batches?.find((b: any) => b.batch_id === batchId); setForm({ ...form, batchId, seriesId: batch?.series_id || '' }); };
+  const handleMouseDown = (e: React.MouseEvent) => { const tag = (e.target as HTMLElement).tagName; if (['INPUT','TEXTAREA','SELECT','BUTTON','A'].includes(tag)) return; setIsDragging(true); dragOffset.current = { x: e.clientX - modalPos.x, y: e.clientY - modalPos.y }; };
+  const handleMouseMove = (e: React.MouseEvent) => { if (!isDragging) return; setModalPos({ x: e.clientX - dragOffset.current.x, y: e.clientY - dragOffset.current.y }); };
+  const handleMouseUp = () => { if (isDragging) setIsDragging(false); };
+  const handleSubmit = (e: React.FormEvent) => { e.preventDefault(); createMutation.mutate({ ...form, count: parseInt(form.count) }); };
+
+  const getStatusBadge = (status: string, print_status?: string) => {
+    if (status === 'LOCKED' && print_status === 'PRINTED') return 'bg-status-yellow-dim text-status-yellow';
+    const map: Record<string, string> = { LOCKED: 'bg-status-yellow-dim text-status-yellow', PRINTED: 'bg-status-green-dim text-status-green', QR_GENERATED: 'bg-status-green-dim text-status-green', DINA_INSERTED: 'bg-status-blue-dim text-status-blue', EXPORTED: 'bg-status-purple-dim text-status-purple', CREATED: 'bg-status-yellow-dim text-status-yellow', ISSUED: 'bg-status-green-dim text-status-green', SHIPPED: 'bg-status-purple-dim text-status-purple' };
+    return map[status] || 'bg-status-yellow-dim text-status-yellow';
+  };
+
+  const getStatusLabel = (status: string, print_status?: string) => {
+    if (status === 'LOCKED' && print_status === 'PRINTED') return '출고가능';
+    const map: Record<string, string> = { LOCKED: 'LOCKED', PRINTED: 'PRINTED', CREATED: '생성됨', DINA_INSERTED: 'DINA삽입', QR_GENERATED: 'QR생성', EXPORTED: '출고됨', ISSUED: '발행완료', SHIPPED: '출고됨' };
+    return map[status] || status;
+  };
+
+  return (
+    <div className="animate-fade-in flex">
+      {/* 메인 컨텐츠 */}
+      <div className={`flex-1 transition-all duration-300 ${selectedAsset ? 'mr-96' : ''}`}>
+
+        {/* 시리즈 필터 탭 */}
+        <div className="mb-6 overflow-x-auto">
+          <div className="flex gap-2 items-center min-w-max py-1">
+            {/* 전체 탭 */}
+            <button
+              onClick={() => handleSeriesSelect(null)}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
+                selectedSeriesId === null
+                  ? 'bg-status-purple text-white'
+                  : 'bg-geo-card border border-geo-border text-txt-secondary hover:text-txt-primary hover:border-status-purple/50'
+              }`}
+            >
+              전체 <span className="ml-1 font-mono text-xs opacity-80">{assetsResponse?.meta?.total || 0}</span>
+            </button>
+
+            {/* 시리즈별 탭 */}
+            {Array.isArray(seriesList) && seriesList.map((s: any) => (
+              <button
+                key={s.series_id}
+                onClick={() => handleSeriesSelect(s.series_id)}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
+                  selectedSeriesId === s.series_id
+                    ? 'bg-status-purple text-white'
+                    : 'bg-geo-card border border-geo-border text-txt-secondary hover:text-txt-primary hover:border-status-purple/50'
+                }`}
+              >
+                {s.name || s.series_name || s.series_id}
+                {s.total_assets !== undefined && (
+                  <span className="ml-1 font-mono text-xs opacity-80">{s.total_assets}</span>
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {isLoading ? <p className="text-txt-secondary">로딩 중..</p> : (
+          <>
+            <div className="bg-geo-card border border-geo-border rounded-xl overflow-hidden">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-geo-border">
+                    <th className="w-[8%] px-3 py-3 text-center text-xs font-semibold text-status-purple uppercase tracking-wider">ID</th>
+                    <th className="w-[30%] px-3 py-3 text-center text-xs font-semibold text-status-purple uppercase tracking-wider">GEO CODE</th>
+                    <th className="w-[20%] px-3 py-3 text-center text-xs font-semibold text-status-purple uppercase tracking-wider">DINA</th>
+                    <th className="w-[12%] px-3 py-3 text-center text-xs font-semibold text-status-purple uppercase tracking-wider">OTP</th>
+                    <th className="w-[10%] px-3 py-3 text-center text-xs font-semibold text-status-purple uppercase tracking-wider">상태</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {assets.map((a: any) => (
+                    <tr key={a.asset_id} className={`border-b border-geo-border/50 last:border-0 transition-colors cursor-pointer ${selectedAsset?.asset_id === a.asset_id ? 'bg-status-purple/10' : 'dark-table-row'}`} onClick={() => setSelectedAsset(a)}>
+                      <td className="px-6 py-4 text-center font-mono text-sm text-status-green">{a.global_seq ? `GSN-A-${String(a.global_seq).padStart(7, '0')}` : '-'}</td>
+                      <td className="px-6 py-4 text-center font-mono text-sm text-txt-secondary">{a.code_id || '-'}</td>
+                      <td className="px-6 py-4 text-center font-mono text-sm text-status-green hover:underline">{a.dina_id}</td>
+                      <td className="px-6 py-4 text-center font-mono text-sm text-txt-secondary">{a.otp_code || '-'}</td>
+                      <td className="px-6 py-4 text-center"><span className={`px-2 py-1 rounded text-xs font-medium ${getStatusBadge(a.status, a.print_status)}`}>{getStatusLabel(a.status, a.print_status)}</span></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* 빈 상태 안내 */}
+            {!assets.length && (
+              <div className="mt-4 px-6 py-5 bg-status-purple-dim border border-status-purple/30 rounded-lg text-center">
+                <p className="text-base font-semibold text-txt-primary mb-1">자산이 없습니다.</p>
+                <p className="text-sm text-txt-secondary">
+                  <button onClick={() => window.location.hash = '/batches'} className="text-status-yellow font-semibold hover:underline">[작업 관리]</button>에서 작업을 생성하면 자산이 자동으로 등록됩니다.
+                </p>
+              </div>
+            )}
+
+            {/* 완료 안내 */}
+            {assets.length > 0 && (
+              <div className="mt-4 px-6 py-5 bg-status-purple-dim border border-status-purple/30 rounded-lg text-center">
+                <p className="text-base font-semibold text-status-green mb-1">자산 생성 완료!</p>
+                <p className="text-sm text-txt-secondary">다음 단계는 <button onClick={() => window.location.hash = '/exports'} className="text-status-yellow font-semibold hover:underline">[자산 출고]</button>에서 진행하세요.</p>
+              </div>
+            )}
+
+            {/* 페이지네이션 */}
+            {totalPages > 1 && (
+              <div className="flex justify-center items-center gap-1 mt-6">
+                <button onClick={() => setCurrentPage(1)} disabled={currentPage === 1}
+                  className="px-2 py-1 text-sm text-txt-secondary hover:text-txt-primary disabled:opacity-30 disabled:cursor-not-allowed">&lt;&lt;</button>
+                <button onClick={() => setCurrentPage(Math.max(1, startPage - 10))} disabled={startPage === 1}
+                  className="px-2 py-1 text-sm text-txt-secondary hover:text-txt-primary disabled:opacity-30 disabled:cursor-not-allowed">&lt;</button>
+                {Array.from({ length: endPage - startPage + 1 }, (_, i) => startPage + i).map((page) => (
+                  <button key={page} onClick={() => setCurrentPage(page)}
+                    className={`w-8 h-8 text-sm rounded ${page === currentPage ? 'bg-status-purple text-white' : 'text-txt-secondary hover:text-txt-primary hover:bg-geo-card-hover'}`}>{page}</button>
+                ))}
+                <button onClick={() => setCurrentPage(Math.min(totalPages, startPage + 10))} disabled={endPage >= totalPages}
+                  className="px-2 py-1 text-sm text-txt-secondary hover:text-txt-primary disabled:opacity-30 disabled:cursor-not-allowed">&gt;</button>
+                <button onClick={() => setCurrentPage(totalPages)} disabled={currentPage === totalPages}
+                  className="px-2 py-1 text-sm text-txt-secondary hover:text-txt-primary disabled:opacity-30 disabled:cursor-not-allowed">&gt;&gt;</button>
+                <span className="ml-4 text-sm text-txt-muted">{currentPage} / {totalPages} 페이지</span>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+
+      {/* QR 사이드 패널 */}
+      {selectedAsset && (
+        <div className="fixed right-0 top-0 h-screen w-96 bg-geo-card border-l border-geo-border shadow-2xl z-40 flex flex-col animate-fade-in">
+          <div className="px-6 py-4 border-b border-geo-border flex items-center justify-between">
+            <h3 className="text-base font-semibold text-txt-primary">자산 정보</h3>
+            <button onClick={() => setSelectedAsset(null)} className="w-8 h-8 flex items-center justify-center rounded-lg text-txt-muted hover:text-txt-primary hover:bg-geo-card-hover transition-all">
+              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12" /></svg>
+            </button>
+          </div>
+          <div className="flex-1 overflow-y-auto p-6">
+            {imageLoading && (
+              <div className="flex justify-center items-center py-8 mb-4">
+                <svg className="animate-spin h-6 w-6 text-status-purple" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+              </div>
+            )}
+            {!imageLoading && assetImage && (
+              <div className="mb-4">
+                <p className="text-xs text-txt-muted uppercase tracking-wider mb-2">
+                  {imageType === 'source' ? '원본 이미지' : '인쇄 결과물'}
+                </p>
+                <div className={`bg-geo-main border rounded-xl overflow-hidden ${imageType === 'rendered' ? 'border-status-green' : 'border-geo-border'}`}>
+                  <img src={assetImage} alt="Asset image" className="w-full h-auto object-contain" />
+                </div>
+              </div>
+            )}
+            {!imageLoading && !assetImage && (
+              <div className="mb-4">
+                <p className="text-xs text-txt-muted uppercase tracking-wider mb-2">이미지</p>
+                <div className="bg-geo-main border border-geo-border rounded-xl overflow-hidden flex items-center justify-center py-8">
+                  <span className="text-txt-muted text-sm">이미지 없음</span>
+                </div>
+              </div>
+            )}
+
+            <div className="bg-white p-3 rounded-xl flex justify-center mb-4 w-40 h-40 mx-auto">
+              <QRCodeSVG id="qr-code-svg" value={selectedAsset.dina_id} size={136} level="H" />
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <p className="text-xs text-txt-muted uppercase tracking-wider mb-1">GEO CODE</p>
+                <p className="font-mono text-txt-primary font-medium">{selectedAsset.code_id || '-'}</p>
+              </div>
+              <div>
+                <p className="text-xs text-txt-muted uppercase tracking-wider mb-1">DINA ID</p>
+                <p className="font-mono text-status-green font-medium">{selectedAsset.dina_id}</p>
+              </div>
+              <div>
+                <p className="text-xs text-txt-muted uppercase tracking-wider mb-1">OTP 코드</p>
+                <p className="font-mono text-txt-primary font-medium">{selectedAsset.otp_code || '-'}</p>
+              </div>
+              <div>
+                <p className="text-xs text-txt-muted uppercase tracking-wider mb-1">상태</p>
+                <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${getStatusBadge(selectedAsset.status, selectedAsset.print_status)}`}>{getStatusLabel(selectedAsset.status, selectedAsset.print_status)}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* [HIDDEN] 향후 사용 예정 */}
+      {false && showModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-start justify-center pt-20 px-4 pb-4" onMouseMove={handleMouseMove} onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp}>
+          <div className="bg-geo-card border border-geo-border rounded-xl w-full max-w-sm flex flex-col cursor-move select-none" style={{ maxHeight: '85vh', transform: `translate(${modalPos.x}px, ${modalPos.y}px)` }} onMouseDown={handleMouseDown}>
+            <div className="bg-geo-main px-6 py-3 border-b border-geo-border rounded-t-xl flex-shrink-0">
+              <h2 className="text-lg font-semibold text-txt-primary">자산 신규 생성</h2>
+            </div>
+            <form onSubmit={handleSubmit} className="p-6 overflow-y-auto">
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs text-txt-secondary mb-1.5">작업 선택 *</label>
+                  <select value={form.batchId} onChange={(e) => handleBatchSelect(e.target.value)} className="w-full px-4 py-2.5 bg-geo-main border border-geo-border rounded-lg text-txt-primary focus:ring-2 focus:ring-status-purple/40 outline-none" required>
+                    <option value="">작업을 선택하세요</option>
+                    {batches?.map((b: any) => <option key={b.batch_id} value={b.batch_id}>{b.name || `Batch ${b.batch_number}`} ({b.series_name})</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs text-txt-secondary mb-1.5">생성할 자산 수 *</label>
+                  <input type="number" placeholder="생성할 자산 수" value={form.count} onChange={(e) => setForm({ ...form, count: e.target.value })} className="w-full px-4 py-2.5 bg-geo-main border border-geo-border rounded-lg text-txt-primary placeholder-txt-muted focus:ring-2 focus:ring-status-purple/40 outline-none" required min="1" max="1000" />
+                </div>
+              </div>
+              <div className="flex gap-2 mt-6">
+                <button type="button" onClick={() => setShowModal(false)} className="flex-1 px-4 py-2.5 border border-geo-border rounded-lg text-txt-secondary hover:text-txt-primary transition-all">취소</button>
+                <button type="submit" className="flex-1 px-4 py-2.5 bg-status-purple text-white rounded-lg font-medium hover:bg-status-purple/80 transition-all">생성</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
