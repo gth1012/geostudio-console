@@ -1,67 +1,65 @@
-import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
+﻿import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/auth.store';
 import { useEffect, useState } from 'react';
 
-// Role-based menu items
+// Role 기반 메뉴 필터링
 const getRoleBasedMenuItems = (role: string | undefined) => {
   
   const allMenuItems = [
     {
-      section: 'WORKSPACE',
+      section: '생산',
       items: [
-        { path: '/', label: 'Dashboard', icon: (
+        { path: '/', label: '대시보드', icon: (
           <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
         )},
-        { path: '/series', label: 'Series', icon: (
+        { path: '/series', label: '시리즈 생성', icon: (
           <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 7h16M4 12h16M4 17h10"/></svg>
         )},
-        { path: '/batches', label: 'Batches', icon: (
+        { path: '/batches', label: '작업 관리', icon: (
           <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v4m0 12v4m-7.07-2.93l2.83-2.83m8.48-8.48l2.83-2.83M2 12h4m12 0h4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83"/></svg>
         )},
-        { path: '/assets', label: 'Assets', icon: (
+        { path: '/assets', label: '자산 관리', icon: (
           <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg>
         )},
-        { path: '/exports', label: 'Exports', icon: (
+        { path: '/exports', label: '자산 출고', icon: (
           <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>
         )},
       ],
     },
     {
-      section: 'MANAGEMENT',
+      section: '관리',
       items: [
-        { path: '/users', label: 'Users', icon: (
+        { path: '/users', label: '사용자 관리', icon: (
           <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
         )},
       ],
     },
     {
-      section: 'SYSTEM',
+      section: '시스템',
       items: [
-        { path: '/audit', label: 'Audit Log', icon: (
+        { path: '/audit', label: '로그 조회', icon: (
           <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
         )},
-        { path: '/system-admin', label: 'System Admin', icon: (
+        { path: '/settings', label: '설정', icon: (<svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>)},
+        { path: '/system-admin', label: '시스템 관리', icon: (
           <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 15a3 3 0 100-6 3 3 0 000 6z"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
-        )},
-        { path: '/settings', label: 'Settings', icon: (
-          <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
         )},
       ],
     },
   ];
 
   if (role === 'agency_admin') {
-    return [{
-      section: 'EXTERNAL',
-      items: [{
-        path: '/', label: 'Go to Agency Console', icon: (
-          <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15,3 21,3 21,9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-        )},
-      ]
-    }];
-  }
+      return [{
+        section: '안내',
+        items: [{
+          path: '/', label: 'Agency Console로 이동하세요', icon: (
+            <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15,3 21,3 21,9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+          )},
+        ]
+      }];
+    }
 
-  return allMenuItems;
+    return allMenuItems;
 };
 
 export default function Layout() {
@@ -72,7 +70,7 @@ export default function Layout() {
 
   useEffect(() => {
     setMounted(true);
-  }, [user]);
+    }, [user]);
 
   const handleLogout = () => {
     logout();
@@ -142,7 +140,7 @@ export default function Layout() {
             <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/>
             </svg>
-            <span>Logout</span>
+            <span>로그아웃</span>
           </button>
         </div>
       </aside>
@@ -159,3 +157,10 @@ export default function Layout() {
     </div>
   );
 }
+
+
+
+
+
+
+
