@@ -51,7 +51,7 @@ export default function SettingsPage() {
             <div>
               <label className="block text-xs text-txt-muted mb-1.5">?꾩옱 鍮꾨?踰덊샇</label>
               <input
-                type="password" autoComplete="new-password"
+                type="password" autoComplete="off"
                 value={currentPassword}
                 onChange={e => setCurrentPassword(e.target.value)}
                 placeholder="?꾩옱 鍮꾨?踰덊샇 ?낅젰"
@@ -62,7 +62,7 @@ export default function SettingsPage() {
             <div>
               <label className="block text-xs text-txt-muted mb-1.5">??鍮꾨?踰덊샇</label>
               <input
-                type="password" autoComplete="new-password"
+                type="password" autoComplete="off"
                 value={newPassword}
                 onChange={e => setNewPassword(e.target.value)}
                 placeholder="??鍮꾨?踰덊샇 ?낅젰 (8???댁긽)"
@@ -73,7 +73,7 @@ export default function SettingsPage() {
             <div>
               <label className="block text-xs text-txt-muted mb-1.5">??鍮꾨?踰덊샇 ?뺤씤</label>
               <input
-                type="password" autoComplete="new-password"
+                type="password" autoComplete="off"
                 value={confirmPassword}
                 onChange={e => setConfirmPassword(e.target.value)}
                 placeholder="??鍮꾨?踰덊샇 ?ъ엯??
@@ -94,4 +94,5 @@ export default function SettingsPage() {
     </div>
   );
 }
+
 
