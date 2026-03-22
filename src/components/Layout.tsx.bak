@@ -1,11 +1,13 @@
 ﻿import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/auth.store';
+import { useEffect, useState } from 'react';
 
 // Role 기반 메뉴 필터링
 const getRoleBasedMenuItems = (role: string | undefined) => {
+  
   const allMenuItems = [
     {
-      section: '메인',
+      section: '생산',
       items: [
         { path: '/', label: '대시보드', icon: (
           <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
@@ -16,23 +18,17 @@ const getRoleBasedMenuItems = (role: string | undefined) => {
         { path: '/batches', label: '작업 관리', icon: (
           <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v4m0 12v4m-7.07-2.93l2.83-2.83m8.48-8.48l2.83-2.83M2 12h4m12 0h4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83"/></svg>
         )},
-      ],
-    },
-    {
-      section: '관리',
-      items: [
         { path: '/assets', label: '자산 관리', icon: (
           <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg>
         )},
         { path: '/exports', label: '자산 출고', icon: (
           <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>
         )},
-        { path: '/distributions', label: '배포 관리', icon: (
-          <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
-        )},
-        { path: '/activations', label: '최초 등록', icon: (
-          <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22,4 12,14.01 9,11.01"/></svg>
-        )},
+      ],
+    },
+    {
+      section: '관리',
+      items: [
         { path: '/users', label: '사용자 관리', icon: (
           <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
         )},
@@ -51,42 +47,29 @@ const getRoleBasedMenuItems = (role: string | undefined) => {
     },
   ];
 
-  // agency_admin: 제한된 메뉴만
   if (role === 'agency_admin') {
-    return [
-      {
-        section: '메인',
-        items: [
-          { path: '/', label: '대시보드', icon: (
-            <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      return [{
+        section: '안내',
+        items: [{
+          path: '/', label: 'Agency Console로 이동하세요', icon: (
+            <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15,3 21,3 21,9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
           )},
-        ],
-      },
-      {
-        section: '기능',
-        items: [
-          { path: '/exports', label: '제조공장 전달', icon: (
-            <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>
-          )},
-          { path: '/distributions', label: 'QR 발송', icon: (
-            <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
-          )},
-          { path: '/activations', label: '최초 등록', icon: (
-            <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22,4 12,14.01 9,11.01"/></svg>
-          )},
-        ],
-      },
-    ];
-  }
+        ]
+      }];
+    }
 
-  // super_admin, ops_admin, viewer: 전체 메뉴
-  return allMenuItems;
+    return allMenuItems;
 };
 
 export default function Layout() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    }, [user]);
 
   const handleLogout = () => {
     logout();
@@ -104,11 +87,11 @@ export default function Layout() {
     .flatMap((s) => s.items)
     .find((m) => isActive(m.path))?.label || '';
 
+  if (!mounted) return null;
+
   return (
     <div className="flex min-h-screen bg-geo-main">
-      {/* Sidebar */}
       <aside className="w-[220px] min-h-screen bg-geo-sidebar border-r border-geo-border flex flex-col fixed z-10">
-        {/* Logo */}
         <div className="px-5 py-6 flex items-center gap-2.5 border-b border-geo-border">
           <div className="w-8 h-8 bg-gradient-to-br from-status-purple to-status-blue rounded-lg flex items-center justify-center text-sm font-bold text-white">
             G
@@ -116,7 +99,6 @@ export default function Layout() {
           <span className="text-base font-semibold tracking-tight text-txt-primary">GeoStudio</span>
         </div>
 
-        {/* Nav */}
         <nav className="p-2 flex-1 flex flex-col gap-0.5">
           {menuItems.map((section) => (
             <div key={section.section}>
@@ -146,7 +128,6 @@ export default function Layout() {
           ))}
         </nav>
 
-        {/* User Section */}
         <div className="p-2 border-t border-geo-border flex flex-col gap-0.5">
           <div className="px-3 py-2.5 text-sm text-txt-secondary">
             {user?.email}
@@ -163,14 +144,11 @@ export default function Layout() {
         </div>
       </aside>
 
-      {/* Main Content */}
       <main className="ml-[220px] flex-1 flex flex-col">
-        {/* Header */}
-        <header className="h-16 bg-white border-b border-geo-border flex items-center px-8">
+        <header className="h-16 bg-geo-card border-b border-geo-border flex items-center px-8">
           <h1 className="text-xl font-semibold text-txt-primary">{currentLabel || 'GeoStudio'}</h1>
         </header>
 
-        {/* Content */}
         <div className="flex-1 overflow-auto">
           <Outlet />
         </div>
@@ -178,3 +156,9 @@ export default function Layout() {
     </div>
   );
 }
+
+
+
+
+
+

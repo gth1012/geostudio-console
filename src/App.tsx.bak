@@ -1,4 +1,4 @@
-import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
+﻿import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthStore } from './stores/auth.store';
 import Layout from './components/Layout';
 import Toast from './components/Toast';
@@ -14,7 +14,6 @@ import ActivationPage from './pages/ActivationPage';
 import UsersPage from './pages/UsersPage';
 import AuditPage from './pages/AuditPage';
 import SystemAdminPage from './pages/SystemAdminPage';
-import SettingsPage from './pages/SettingsPage';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuthStore();
@@ -48,10 +47,12 @@ export default function App() {
             <Route path="users" element={<UsersPage />} />
             <Route path="audit" element={<AuditPage />} />
             <Route path="system-admin" element={<SystemAdminPage />} />
-            <Route path="settings" element={<SettingsPage />} />
           </Route>
         </Routes>
       </HashRouter>
     </>
   );
 }
+
+
+
