@@ -5,16 +5,21 @@ import api from '../services/api';
 import { useToastStore } from '../stores/toast.store';
 
 const MATERIAL_OPTIONS = [
-  { value: 'photocard_standard', label: '포토카드 - Standard (아트지)', carrier: 'PATTERN' },
-  { value: 'photocard_premium',  label: '포토카드 - Premium (PVC/PETG)',  carrier: 'PATTERN' },
-  { value: 'photocard_special',  label: '포토카드 - Special (홀로그램)',  carrier: 'PATTERN' },
-  { value: 'photocard_eco',      label: '포토카드 - Eco (친환경/FSC)',    carrier: 'PATTERN' },
-  { value: 'acrylic',            label: '아크릴 (UV인쇄)',                carrier: 'ENGRAVING' },
-  { value: 'metal',              label: '금속',                          carrier: 'ENGRAVING' },
-  { value: 'fabric',             label: '직물',                          carrier: 'PATTERN' },
-  { value: 'ceramic_engraving',  label: '세라믹 (각인)',                  carrier: 'ENGRAVING' },
-  { value: 'ceramic_sublimation',label: '세라믹 (서브리메이션)',           carrier: 'PATTERN' },
-  { value: 'film',               label: '필름 (PET/PVC)',                carrier: 'PATTERN' },
+  // Photocard
+  { value: 'photocard_standard',   label: 'Photocard - Standard (Art Paper)',  carrier: 'PATTERN' },
+  { value: 'photocard_premium',    label: 'Photocard - Premium (PVC/PETG)',    carrier: 'PATTERN' },
+  { value: 'photocard_special',    label: 'Photocard - Special (Hologram)',    carrier: 'PATTERN' },
+  { value: 'photocard_eco',        label: 'Photocard - Eco (FSC)',             carrier: 'PATTERN' },
+  // Goods
+  { value: 'acrylic',              label: 'Acrylic (UV Print)',                carrier: 'ENGRAVING' },
+  { value: 'metal',                label: 'Metal',                             carrier: 'ENGRAVING' },
+  { value: 'fabric',               label: 'Fabric',                            carrier: 'PATTERN' },
+  { value: 'ceramic_engraving',    label: 'Ceramic (Engraving)',               carrier: 'ENGRAVING' },
+  { value: 'ceramic_sublimation',  label: 'Ceramic (Sublimation)',             carrier: 'PATTERN' },
+  { value: 'film',                 label: 'Film (PET/PVC)',                    carrier: 'PATTERN' },
+  // Document
+  { value: 'document_inkjet',      label: 'Document - Inkjet',                 carrier: 'PATTERN' },
+  { value: 'document_laser',       label: 'Document - Laser',                  carrier: 'PATTERN' },
 ] as const;
 
 const materialCarrier = (v: string) => MATERIAL_OPTIONS.find(o => o.value === v)?.carrier || 'PATTERN';
@@ -24,7 +29,7 @@ function CarrierGuideText({ material }: { material: string }) {
   const isPattern = carrier === 'PATTERN';
   return (
     <p className={`mt-2 text-xs font-medium ${isPattern ? 'text-status-green' : 'text-status-blue'}`}>
-      {isPattern ? '✅ 패턴 기반 인증이 적용됩니다' : '✅ 각인 기반 인증이 적용됩니다'}
+      {isPattern ? 'GeoCode pattern will be embedded.' : 'Engraving method will be applied.'}
     </p>
   );
 }
@@ -45,7 +50,7 @@ interface SeriesFormData {
   dealer_id?: string;
 }
 
-// ─── 시리즈 생성 모달 (3단계) ─────────────────────────────────────────────────
+// 3-step modal: dealer -> artist -> series
 type CreateStep = 'dealer' | 'artist' | 'series';
 
 interface CreateSeriesModalProps {
@@ -87,9 +92,9 @@ function CreateSeriesModal({ onClose, onSubmit, isPending, modalPos, onMouseDown
       setShowNewDealer(false);
       setNewDealer({ name: '', contact_email: '', contact_phone: '' });
       setStep('artist');
-      toast.show('기획사가 등록되었습니다', 'success');
+      toast.show('Dealer created.', 'success');
     },
-    onError: (err: any) => toast.show(err.response?.data?.message || '기획사 등록 실패', 'error'),
+    onError: (err: any) => toast.show(err.response?.data?.message || 'Failed to create dealer.', 'error'),
   });
 
   const handleDealerSelect = (dealer: Dealer) => {
@@ -114,7 +119,7 @@ function CreateSeriesModal({ onClose, onSubmit, isPending, modalPos, onMouseDown
     onSubmit({ ...form, dealer_id: selectedDealer?.dealer_id });
   };
 
-  const stepLabel = { dealer: '1/3 기획사 선택', artist: '2/3 아티스트', series: '3/3 시리즈 정보' };
+  const stepLabel = { dealer: '1/3 Select Client', artist: '2/3 Artist', series: '3/3 Series Info' };
 
   return createPortal(
     <div
@@ -139,14 +144,14 @@ function CreateSeriesModal({ onClose, onSubmit, isPending, modalPos, onMouseDown
 
         <div className="p-6" style={{ maxHeight: 'calc(100vh - 160px)', overflowY: 'auto' }}>
 
-          {/* Step 1: 기획사 선택 */}
+          {/* Step 1: Dealer */}
           {step === 'dealer' && (
             <div className="space-y-3">
               {!showNewDealer ? (
                 <>
                   <div className="space-y-2 max-h-52 overflow-y-auto">
                     {dealers?.length === 0 && (
-                      <p className="text-xs text-txt-muted text-center py-3">등록된 기획사가 없습니다</p>
+                      <p className="text-xs text-txt-muted text-center py-3">No clients registered.</p>
                     )}
                     {dealers?.map(d => (
                       <button
@@ -163,19 +168,19 @@ function CreateSeriesModal({ onClose, onSubmit, isPending, modalPos, onMouseDown
                     onClick={() => setShowNewDealer(true)}
                     className="w-full py-2.5 border border-dashed border-status-yellow rounded-lg text-xs text-status-yellow hover:bg-[#1a1a2e] transition-all"
                   >
-                    + 새 기획사 등록
+                    + 새 거래처 등록
                   </button>
                   <button onClick={handleSkipDealer} className="w-full text-xs text-status-yellow hover:text-yellow-300 transition-all py-1">
-                    기획사 없이 진행 →
+                    거래처 없이 계속
                   </button>
                 </>
               ) : (
                 <div className="space-y-3">
-                  <p className="text-xs font-medium text-txt-secondary">새 기획사 등록</p>
+                  <p className="text-xs font-medium text-txt-secondary">새 거래처 등록</p>
                   <input
                     value={newDealer.name}
                     onChange={e => setNewDealer(d => ({ ...d, name: e.target.value }))}
-                    placeholder="회사명 *"
+                    placeholder="거래처명 *"
                     className="w-full px-4 py-2.5 bg-geo-main border border-geo-border rounded-lg text-txt-primary placeholder-txt-muted focus:ring-2 focus:ring-status-purple/40 outline-none text-sm"
                   />
                   <input
@@ -188,7 +193,7 @@ function CreateSeriesModal({ onClose, onSubmit, isPending, modalPos, onMouseDown
                   <input
                     value={newDealer.contact_phone}
                     onChange={e => setNewDealer(d => ({ ...d, contact_phone: e.target.value }))}
-                    placeholder="전화번호"
+                    placeholder="연락처"
                     className="w-full px-4 py-2.5 bg-geo-main border border-geo-border rounded-lg text-txt-primary placeholder-txt-muted focus:ring-2 focus:ring-status-purple/40 outline-none text-sm"
                   />
                   <div className="flex gap-2">
@@ -198,7 +203,7 @@ function CreateSeriesModal({ onClose, onSubmit, isPending, modalPos, onMouseDown
                       disabled={!newDealer.name || createDealerMutation.isPending}
                       className="flex-1 px-4 py-2.5 bg-status-purple text-white rounded-lg text-sm font-medium hover:bg-status-purple/80 disabled:opacity-50 transition-all"
                     >
-                      {createDealerMutation.isPending ? '등록 중...' : '등록'}
+                      {createDealerMutation.isPending ? '저장 중..' : '저장'}
                     </button>
                   </div>
                 </div>
@@ -206,16 +211,16 @@ function CreateSeriesModal({ onClose, onSubmit, isPending, modalPos, onMouseDown
             </div>
           )}
 
-          {/* Step 2: 아티스트 */}
+          {/* Step 2: Artist */}
           {step === 'artist' && (
             <div className="space-y-3">
               {selectedDealer && (
                 <div className="px-3 py-2 rounded-lg bg-status-purple/5 border border-status-purple/20 text-xs text-status-purple">
-                  기획사: {selectedDealer.name}
+                  거래처: {selectedDealer.name}
                 </div>
               )}
               <div>
-                <label className="block text-xs text-txt-secondary mb-1.5">아티스트명</label>
+                <label className="block text-xs text-txt-secondary mb-1.5">아티스트</label>
                 <input
                   value={artistInput}
                   onChange={e => setArtistInput(e.target.value)}
@@ -247,7 +252,7 @@ function CreateSeriesModal({ onClose, onSubmit, isPending, modalPos, onMouseDown
             </div>
           )}
 
-          {/* Step 3: 시리즈 정보 */}
+          {/* Step 3: Series Info */}
           {step === 'series' && (
             <form onSubmit={handleSubmit} className="space-y-4">
               {selectedDealer && (
@@ -271,7 +276,7 @@ function CreateSeriesModal({ onClose, onSubmit, isPending, modalPos, onMouseDown
                 <input
                   value={form.artistName}
                   onChange={e => setForm(f => ({ ...f, artistName: e.target.value }))}
-                  placeholder="아티스트명 (선택)"
+                  placeholder="아티스트명(수정가능)"
                   className="w-full px-4 py-2.5 bg-geo-main border border-geo-border rounded-lg text-txt-primary placeholder-txt-muted focus:ring-2 focus:ring-status-purple/40 outline-none"
                 />
               </div>
@@ -283,19 +288,23 @@ function CreateSeriesModal({ onClose, onSubmit, isPending, modalPos, onMouseDown
                   required
                   className="w-full px-4 py-2.5 bg-geo-main border border-geo-border rounded-lg text-txt-primary focus:ring-2 focus:ring-status-purple/40 outline-none"
                 >
-                  <optgroup label="── 포토카드 ──">
+                  <optgroup label="— 포토카드 —">
                     <option value="photocard_standard">포토카드 - Standard (아트지)</option>
                     <option value="photocard_premium">포토카드 - Premium (PVC/PETG)</option>
                     <option value="photocard_special">포토카드 - Special (홀로그램)</option>
                     <option value="photocard_eco">포토카드 - Eco (친환경/FSC)</option>
                   </optgroup>
-                  <optgroup label="── 굿즈 ──">
+                  <optgroup label="— 굿즈 —">
                     <option value="acrylic">아크릴 (UV인쇄)</option>
                     <option value="metal">금속</option>
                     <option value="fabric">직물</option>
                     <option value="ceramic_engraving">세라믹 (각인)</option>
                     <option value="ceramic_sublimation">세라믹 (서브리메이션)</option>
                     <option value="film">필름 (PET/PVC)</option>
+                  </optgroup>
+                  <optgroup label="— 문서 —">
+                    <option value="document_inkjet">문서 - 잉크젯</option>
+                    <option value="document_laser">문서 - 레이저</option>
                   </optgroup>
                 </select>
                 <CarrierGuideText material={form.material} />
@@ -313,7 +322,7 @@ function CreateSeriesModal({ onClose, onSubmit, isPending, modalPos, onMouseDown
               <div className="flex gap-2">
                 <button type="button" onClick={() => setStep('artist')} className="flex-1 px-4 py-2.5 border border-geo-border rounded-lg text-txt-secondary hover:text-txt-primary transition-all">이전</button>
                 <button type="submit" disabled={isPending} className="flex-1 px-4 py-2.5 bg-status-purple text-white rounded-lg font-medium hover:bg-status-purple/80 disabled:opacity-50 transition-all">
-                  {isPending ? '생성 중...' : '생성'}
+                  {isPending ? '생성 중..' : '생성'}
                 </button>
               </div>
             </form>
@@ -326,7 +335,7 @@ function CreateSeriesModal({ onClose, onSubmit, isPending, modalPos, onMouseDown
   );
 }
 
-// ─── 수정 모달 (기존 유지) ────────────────────────────────────────────────────
+// Edit Series Modal
 interface EditSeriesModalProps {
   form: SeriesFormData;
   setForm: (form: SeriesFormData) => void;
@@ -362,25 +371,29 @@ function EditSeriesModal({ form, setForm, onSubmit, onClose, isPending, modalPos
             </div>
             <div>
               <label className="block text-xs text-txt-secondary mb-1.5">아티스트</label>
-              <input value={form.artistName} onChange={(e) => setForm({ ...form, artistName: e.target.value })} placeholder="아티스트명 (선택)"
+              <input value={form.artistName} onChange={(e) => setForm({ ...form, artistName: e.target.value })} placeholder="아티스트명(수정가능)"
                 className="w-full px-4 py-2.5 bg-geo-main border border-geo-border rounded-lg text-txt-primary placeholder-txt-muted focus:ring-2 focus:ring-status-purple/40 outline-none" />
             </div>
             <div>
               <label className="block text-xs text-txt-secondary mb-1.5">재질 *</label>
               <select value={form.material} onChange={(e) => setForm({ ...form, material: e.target.value })} className="w-full px-4 py-2.5 bg-geo-main border border-geo-border rounded-lg text-txt-primary focus:ring-2 focus:ring-status-purple/40 outline-none" required>
-                <optgroup label="── 포토카드 ──">
+                <optgroup label="— 포토카드 —">
                   <option value="photocard_standard">포토카드 - Standard (아트지)</option>
                   <option value="photocard_premium">포토카드 - Premium (PVC/PETG)</option>
                   <option value="photocard_special">포토카드 - Special (홀로그램)</option>
                   <option value="photocard_eco">포토카드 - Eco (친환경/FSC)</option>
                 </optgroup>
-                <optgroup label="── 굿즈 ──">
+                <optgroup label="— 굿즈 —">
                   <option value="acrylic">아크릴 (UV인쇄)</option>
                   <option value="metal">금속</option>
                   <option value="fabric">직물</option>
                   <option value="ceramic_engraving">세라믹 (각인)</option>
                   <option value="ceramic_sublimation">세라믹 (서브리메이션)</option>
                   <option value="film">필름 (PET/PVC)</option>
+                </optgroup>
+                <optgroup label="— 문서 —">
+                  <option value="document_inkjet">문서 - 잉크젯</option>
+                  <option value="document_laser">문서 - 레이저</option>
                 </optgroup>
               </select>
               <CarrierGuideText material={form.material} />
@@ -394,7 +407,7 @@ function EditSeriesModal({ form, setForm, onSubmit, onClose, isPending, modalPos
           <div className="flex gap-2 mt-6">
             <button type="button" onClick={onClose} disabled={isPending} className="flex-1 px-4 py-2.5 border border-geo-border rounded-lg text-txt-secondary hover:text-txt-primary hover:border-geo-border-hover transition-all">취소</button>
             <button type="submit" disabled={isPending} className="flex-1 px-4 py-2.5 bg-status-purple text-white rounded-lg font-medium hover:bg-status-purple/80 disabled:opacity-50 transition-all">
-              {isPending ? '저장 중...' : '저장'}
+              {isPending ? '저장 중..' : '저장'}
             </button>
           </div>
         </form>
@@ -404,7 +417,7 @@ function EditSeriesModal({ form, setForm, onSubmit, onClose, isPending, modalPos
   );
 }
 
-// ─── 메인 페이지 ──────────────────────────────────────────────────────────────
+// Main SeriesPage component
 export default function SeriesPage() {
   const [showModal, setShowModal] = useState(false);
   const [showTrash, setShowTrash] = useState(false);
@@ -428,34 +441,38 @@ export default function SeriesPage() {
   const createMutation = useMutation({
     mutationFn: (data: any) => api.post('/series', { ...data, artist_name: data.artistName, insertionMethod: materialCarrier(data.material) }),
     onSuccess: () => {
-      toast.show('시리즈가 생성되었습니다', 'success');
+      toast.show('시리즈가 생성되었습니다.', 'success');
       queryClient.invalidateQueries({ queryKey: ['series'] });
       queryClient.invalidateQueries({ queryKey: ['dealers'] });
       queryClient.invalidateQueries({ queryKey: ['dealer-artists'] });
       setShowModal(false);
     },
-    onError: (err: any) => { toast.show(err.response?.data?.message || '시리즈 생성 실패', 'error'); },
+    onError: (err: any) => { toast.show(err.response?.data?.message || '생성에 실패했습니다.', 'error'); },
   });
 
-  const updateMutation = useMutation({ mutationFn: ({ id, data }: { id: string; data: any }) => api.patch(`/series/${id}`, { ...data, insertion_method: materialCarrier(data.material) }), onSuccess: () => {
-    toast.show('시리즈가 수정되었습니다', 'success');
-    queryClient.invalidateQueries({ queryKey: ['series'] });
-    setEditTarget(null);
-  }, onError: (err: any) => { toast.show(err.response?.data?.message || '시리즈 수정 실패', 'error'); } });
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: any }) => api.patch(`/series/${id}`, { ...data, insertion_method: materialCarrier(data.material) }),
+    onSuccess: () => {
+      toast.show('시리즈가 수정되었습니다.', 'success');
+      queryClient.invalidateQueries({ queryKey: ['series'] });
+      setEditTarget(null);
+    },
+    onError: (err: any) => { toast.show(err.response?.data?.message || '수정에 실패했습니다.', 'error'); }
+  });
 
-  const archiveMutation = useMutation({ mutationFn: (seriesId: string) => api.put(`/series/${seriesId}/archive`), onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['series'] }); toast.show('시리즈가 비활성화되었습니다', 'success'); }, onError: (err: any) => { toast.show(err.response?.data?.message || '비활성화 실패', 'error'); } });
-  const activateMutation = useMutation({ mutationFn: (seriesId: string) => api.put(`/series/${seriesId}/activate`), onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['series'] }); toast.show('시리즈가 활성화되었습니다', 'success'); }, onError: (err: any) => { toast.show(err.response?.data?.message || '활성화 실패', 'error'); } });
-  const deleteMutation = useMutation({ mutationFn: (seriesId: string) => api.delete(`/series/${seriesId}`), onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['series'] }); queryClient.invalidateQueries({ queryKey: ['series-trash'] }); toast.show('시리즈가 휴지통으로 이동되었습니다', 'success'); }, onError: (err: any) => { toast.show(err.response?.data?.message || '삭제 실패', 'error'); } });
-  const restoreMutation = useMutation({ mutationFn: (seriesId: string) => api.put(`/series/${seriesId}/restore`), onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['series'] }); queryClient.invalidateQueries({ queryKey: ['series-trash'] }); toast.show('시리즈가 복원되었습니다', 'success'); }, onError: (err: any) => { toast.show(err.response?.data?.message || '복원 실패', 'error'); } });
-  const permanentDeleteMutation = useMutation({ mutationFn: (seriesId: string) => api.delete(`/series/${seriesId}/permanent`), onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['series-trash'] }); toast.show('시리즈가 영구 삭제되었습니다', 'success'); }, onError: (err: any) => { toast.show(err.response?.data?.message || '영구 삭제 실패', 'error'); } });
+  const archiveMutation = useMutation({ mutationFn: (seriesId: string) => api.put(`/series/${seriesId}/archive`), onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['series'] }); toast.show('시리즈가 비활성화되었습니다.', 'success'); }, onError: (err: any) => { toast.show(err.response?.data?.message || '비활성화 실패.', 'error'); } });
+  const activateMutation = useMutation({ mutationFn: (seriesId: string) => api.put(`/series/${seriesId}/activate`), onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['series'] }); toast.show('시리즈가 활성화되었습니다.', 'success'); }, onError: (err: any) => { toast.show(err.response?.data?.message || '활성화 실패.', 'error'); } });
+  const deleteMutation = useMutation({ mutationFn: (seriesId: string) => api.delete(`/series/${seriesId}`), onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['series'] }); queryClient.invalidateQueries({ queryKey: ['series-trash'] }); toast.show('시리즈가 휴지통으로 이동되었습니다.', 'success'); }, onError: (err: any) => { toast.show(err.response?.data?.message || '삭제 실패.', 'error'); } });
+  const restoreMutation = useMutation({ mutationFn: (seriesId: string) => api.put(`/series/${seriesId}/restore`), onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['series'] }); queryClient.invalidateQueries({ queryKey: ['series-trash'] }); toast.show('시리즈가 복원되었습니다.', 'success'); }, onError: (err: any) => { toast.show(err.response?.data?.message || '복원 실패.', 'error'); } });
+  const permanentDeleteMutation = useMutation({ mutationFn: (seriesId: string) => api.delete(`/series/${seriesId}/permanent`), onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['series-trash'] }); toast.show('시리즈가 영구 삭제되었습니다.', 'success'); }, onError: (err: any) => { toast.show(err.response?.data?.message || '영구 삭제 실패.', 'error'); } });
 
   const handleUpdate = (e: React.FormEvent) => { e.preventDefault(); if (!editTarget || updateMutation.isPending) return; updateMutation.mutate({ id: editTarget.series_id, data: editForm }); };
 
-  const handleDeactivate = (id: string, name: string) => { setConfirmModal({ show: true, message: `"${name}" 시리즈를 비활성화 하시겠습니까?`, confirmBtnClass: 'bg-status-yellow-dim text-status-yellow hover:bg-status-yellow/20', onConfirm: () => { archiveMutation.mutate(id); setConfirmModal({ ...confirmModal, show: false }); } }); };
-  const handleActivate = (id: string, name: string) => { setConfirmModal({ show: true, message: `"${name}" 시리즈를 활성화 하시겠습니까?`, onConfirm: () => { activateMutation.mutate(id); setConfirmModal({ ...confirmModal, show: false }); } }); };
-  const handleDelete = (id: string, name: string) => { setConfirmModal({ show: true, message: `"${name}" 시리즈를 휴지통으로 이동하시겠습니까?`, onConfirm: () => { deleteMutation.mutate(id); setConfirmModal({ ...confirmModal, show: false }); } }); };
-  const handleRestore = (id: string, name: string) => { setConfirmModal({ show: true, message: `"${name}" 시리즈를 복구하시겠습니까?`, onConfirm: () => { restoreMutation.mutate(id); setConfirmModal({ ...confirmModal, show: false }); } }); };
-  const handlePermanentDelete = (id: string, name: string) => { setConfirmModal({ show: true, message: `"${name}" 시리즈를 영구 삭제하시겠습니까?`, subMessage: '이 작업은 되돌릴 수 없습니다!', onConfirm: () => { permanentDeleteMutation.mutate(id); setConfirmModal({ ...confirmModal, show: false }); } }); };
+  const handleDeactivate = (id: string, name: string) => { setConfirmModal({ show: true, message: `"${name}" 시리즈를 비활성화할까요?`, confirmBtnClass: 'bg-status-yellow-dim text-status-yellow hover:bg-status-yellow/20', onConfirm: () => { archiveMutation.mutate(id); setConfirmModal({ ...confirmModal, show: false }); } }); };
+  const handleActivate = (id: string, name: string) => { setConfirmModal({ show: true, message: `"${name}" 시리즈를 활성화할까요?`, onConfirm: () => { activateMutation.mutate(id); setConfirmModal({ ...confirmModal, show: false }); } }); };
+  const handleDelete = (id: string, name: string) => { setConfirmModal({ show: true, message: `"${name}" 시리즈를 휴지통으로 이동할까요?`, onConfirm: () => { deleteMutation.mutate(id); setConfirmModal({ ...confirmModal, show: false }); } }); };
+  const handleRestore = (id: string, name: string) => { setConfirmModal({ show: true, message: `"${name}" 시리즈를 복원할까요?`, onConfirm: () => { restoreMutation.mutate(id); setConfirmModal({ ...confirmModal, show: false }); } }); };
+  const handlePermanentDelete = (id: string, name: string) => { setConfirmModal({ show: true, message: `"${name}" 시리즈를 영구 삭제할까요?`, subMessage: '이 작업은 되돌릴 수 없습니다!', onConfirm: () => { permanentDeleteMutation.mutate(id); setConfirmModal({ ...confirmModal, show: false }); } }); };
 
   const handleMouseDown = (e: React.MouseEvent) => { const tag = (e.target as HTMLElement).tagName; if (['INPUT','TEXTAREA','SELECT','BUTTON','A'].includes(tag)) return; setIsDragging(true); dragOffset.current = { x: e.clientX - modalPos.x, y: e.clientY - modalPos.y }; };
   const handleMouseMove = (e: React.MouseEvent) => { if (!isDragging) return; setModalPos({ x: e.clientX - dragOffset.current.x, y: e.clientY - dragOffset.current.y }); };
@@ -467,7 +484,7 @@ export default function SeriesPage() {
   const openEditModal = (s: any) => {
     setEditModalPos({ x: 0, y: 0 });
     setEditTarget({ series_id: s.series_id });
-    setEditForm({ name: s.name || '', code: s.code || '', description: s.description || '', artistName: s.artist_name || '', material: s.material || 'paper_art' });
+    setEditForm({ name: s.name || '', code: s.code || '', description: s.description || '', artistName: s.artist_name || '', material: s.material || 'photocard_standard' });
   };
 
   const isActionPending = archiveMutation.isPending || activateMutation.isPending || deleteMutation.isPending || restoreMutation.isPending || permanentDeleteMutation.isPending;
@@ -483,50 +500,54 @@ export default function SeriesPage() {
           )}
         </div>
         <button onClick={() => setShowTrash(!showTrash)} className={`px-4 py-2 text-sm font-medium rounded-lg border transition-all ${showTrash ? 'bg-status-purple text-white border-status-purple' : 'bg-transparent text-txt-secondary border-geo-border hover:border-geo-border-hover hover:text-txt-primary'}`}>
-          {showTrash ? '← 목록으로' : '🗑 휴지통'}
+          {showTrash ? '목록 보기' : '휴지통 보기'}
         </button>
       </div>
 
       {isDataLoading ? (
-        <p className="text-txt-secondary">로딩 중...</p>
+        <p className="text-txt-secondary">로딩 중..</p>
       ) : (
         <div className="bg-geo-card border border-geo-border rounded-xl overflow-visible">
           <table className="w-full table-fixed">
             <thead>
               <tr className="border-b border-geo-border">
                 <th className="w-[12%] px-4 py-3 text-center text-xs font-semibold text-status-purple uppercase tracking-wider">ID</th>
-                <th className="w-[13%] px-4 py-3 text-center text-xs font-semibold text-status-purple uppercase tracking-wider">기획사</th><th className="w-[17%] px-4 py-3 text-center text-xs font-semibold text-status-purple uppercase tracking-wider">시리즈</th><th className="w-[20%] px-4 py-3 text-center text-xs font-semibold text-status-purple uppercase tracking-wider">아티스트</th>
-                <th className="w-[14%] px-4 py-3 text-center text-xs font-semibold text-status-purple uppercase tracking-wider">{showTrash ? '' : '생성일'}</th><th className="w-[10%] px-4 py-3 text-center text-xs font-semibold text-status-purple uppercase tracking-wider">{showTrash ? '삭제일' : '상태'}</th>
-                <th className="w-[18%] px-4 py-3 text-center text-xs font-semibold text-status-purple uppercase tracking-wider">작업</th>
+                <th className="w-[13%] px-4 py-3 text-center text-xs font-semibold text-status-purple uppercase tracking-wider">거래처</th>
+                <th className="w-[17%] px-4 py-3 text-center text-xs font-semibold text-status-purple uppercase tracking-wider">시리즈</th>
+                <th className="w-[20%] px-4 py-3 text-center text-xs font-semibold text-status-purple uppercase tracking-wider">아티스트</th>
+                <th className="w-[14%] px-4 py-3 text-center text-xs font-semibold text-status-purple uppercase tracking-wider">{showTrash ? '' : '생성일'}</th>
+                <th className="w-[10%] px-4 py-3 text-center text-xs font-semibold text-status-purple uppercase tracking-wider">{showTrash ? '삭제일' : '상태'}</th>
+                <th className="w-[18%] px-4 py-3 text-center text-xs font-semibold text-status-purple uppercase tracking-wider">관리</th>
               </tr>
             </thead>
             <tbody>
               {displayData?.length === 0 ? (
-                <tr>
-                  <td colSpan={6}></td>
-                </tr>
+                <tr><td colSpan={6}></td></tr>
               ) : (
                 displayData?.map((s: any) => (
                   <tr key={s.series_id} className="border-b border-geo-border/50 last:border-0 dark-table-row transition-colors">
                     <td className="px-4 py-3 text-center font-mono text-sm text-status-green">{s.display_id || '-'}</td>
-                    <td className="px-4 py-3 text-center text-txt-primary truncate">{s.dealer_name || '-'}</td><td className="px-4 py-3 text-center text-txt-primary truncate">{s.name || '-'}</td><td className="px-4 py-3 text-center text-txt-primary truncate">{s.artist_name || '-'}</td>
-                    <td className="px-4 py-3 text-center text-txt-muted text-xs">{!showTrash && new Date(s.created_at).toLocaleDateString()}</td><td className="px-4 py-3 text-center">
+                    <td className="px-4 py-3 text-center text-txt-primary truncate">{s.dealer_name || '-'}</td>
+                    <td className="px-4 py-3 text-center text-txt-primary truncate">{s.name || '-'}</td>
+                    <td className="px-4 py-3 text-center text-txt-primary truncate">{s.artist_name || '-'}</td>
+                    <td className="px-4 py-3 text-center text-txt-muted text-xs">{!showTrash && new Date(s.created_at).toLocaleDateString()}</td>
+                    <td className="px-4 py-3 text-center">
                       {showTrash ? <span className="text-txt-muted text-xs">{new Date(s.deleted_at).toLocaleDateString()}</span> : (
-                        <span className={`inline-block w-14 px-1 py-1 rounded text-xs font-medium text-center ${s.status === 'ACTIVE' ? 'bg-status-green-dim text-status-green' : 'bg-status-yellow-dim text-status-yellow'}`}>{s.status === 'ACTIVE' ? '운영중' : '비활성'}</span>
+                        <span className={`inline-block w-14 px-1 py-1 rounded text-xs font-medium text-center ${s.status === 'ACTIVE' ? 'bg-status-green-dim text-status-green' : 'bg-status-yellow-dim text-status-yellow'}`}>{s.status === 'ACTIVE' ? '운영중' : '보관'}</span>
                       )}
                     </td>
                     <td className="px-3 py-3 text-center">
                       <div className="flex justify-center gap-1">
                         {showTrash ? (
                           <>
-                            <button onClick={() => handleRestore(s.series_id, s.name)} disabled={isActionPending} className="w-12 px-1 py-1 text-xs bg-status-blue-dim text-status-blue rounded hover:bg-status-blue/20 disabled:opacity-50 transition-all">복구</button>
-                            <button onClick={() => handlePermanentDelete(s.series_id, s.name)} disabled={isActionPending} className="w-12 px-1 py-1 text-xs bg-status-red-dim text-status-red rounded hover:bg-status-red/20 disabled:opacity-50 transition-all">비우기</button>
+                            <button onClick={() => handleRestore(s.series_id, s.name)} disabled={isActionPending} className="w-12 px-1 py-1 text-xs bg-status-blue-dim text-status-blue rounded hover:bg-status-blue/20 disabled:opacity-50 transition-all">복원</button>
+                            <button onClick={() => handlePermanentDelete(s.series_id, s.name)} disabled={isActionPending} className="w-12 px-1 py-1 text-xs bg-status-red-dim text-status-red rounded hover:bg-status-red/20 disabled:opacity-50 transition-all">삭제</button>
                           </>
                         ) : (
                           <>
                             <button onClick={() => openEditModal(s)} disabled={isActionPending} className="w-12 px-1 py-1 text-xs bg-status-yellow-dim text-status-yellow rounded hover:bg-status-yellow/20 disabled:opacity-50 transition-all">수정</button>
                             {s.status === 'ACTIVE' ? (
-                              <button onClick={() => handleDeactivate(s.series_id, s.name)} disabled={isActionPending} className="w-12 px-1 py-1 text-xs bg-status-yellow-dim text-status-yellow rounded hover:bg-status-yellow/20 disabled:opacity-50 transition-all">비활성</button>
+                              <button onClick={() => handleDeactivate(s.series_id, s.name)} disabled={isActionPending} className="w-12 px-1 py-1 text-xs bg-status-yellow-dim text-status-yellow rounded hover:bg-status-yellow/20 disabled:opacity-50 transition-all">보관</button>
                             ) : (
                               <>
                                 <button onClick={() => handleActivate(s.series_id, s.name)} disabled={isActionPending} className="w-12 px-1 py-1 text-xs bg-status-green-dim text-status-green rounded hover:bg-status-green/20 disabled:opacity-50 transition-all">활성</button>
@@ -548,13 +569,13 @@ export default function SeriesPage() {
       {!showTrash && (!displayData || displayData.length === 0) && (
         <div className="mt-4 px-6 py-5 bg-status-purple-dim border border-status-purple/30 rounded-lg text-center">
           <p className="text-base font-semibold text-txt-primary mb-1">시리즈가 없습니다.</p>
-          <p className="text-sm text-txt-secondary"><button onClick={() => { setModalPos({ x: 0, y: 0 }); setShowModal(true); }} className="text-status-yellow font-semibold hover:underline">[시리즈 생성]</button>{` `}버튼을 눌러 시리즈를 먼저 만들어주세요.</p>
+          <p className="text-sm text-txt-secondary"><button onClick={() => { setModalPos({ x: 0, y: 0 }); setShowModal(true); }} className="text-status-yellow font-semibold hover:underline">[시리즈 생성]</button>{` `}버튼으로 첫 시리즈를 만들어 보세요.</p>
         </div>
       )}
       {!showTrash && displayData && displayData.length > 0 && (
         <div className="mt-4 px-6 py-5 bg-status-purple-dim border border-status-purple/30 rounded-lg text-center">
-          <p className="text-base font-semibold text-status-green mb-1">시리즈 생성 완료!</p>
-          <p className="text-sm text-txt-secondary">다음 작업은{' '}<button onClick={() => window.location.hash = '/batches'} className="text-status-yellow font-semibold hover:underline">[작업 관리]</button>에서 진행하세요.</p>
+          <p className="text-base font-semibold text-status-green mb-1">시리즈 준비 완료!</p>
+          <p className="text-sm text-txt-secondary">이제 작업을{' '}<button onClick={() => window.location.hash = '/batches'} className="text-status-yellow font-semibold hover:underline">[작업 관리]</button>에서 생성하세요.</p>
         </div>
       )}
 
@@ -600,9 +621,3 @@ export default function SeriesPage() {
     </div>
   );
 }
-
-
-
-
-
-
