@@ -6,11 +6,11 @@ import { useAuthStore } from '../stores/auth.store';
 
 export default function UsersPage() {
   const [showModal, setShowModal] = useState(false);
-  const [form, setForm] = useState({ email: '', password: '', name: '', role: 'STUDIO_VIEWER' });
-  const [modalPos, setModalPos] = useState({ x: 0, y: 0 });
+  const [form, setForm] = useState({ email: '', password: '', name: '' });
   const [isDragging, setIsDragging] = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState<{ userId: string; email: string } | null>(null);
+  const [dragPos, setDragPos] = useState({ x: 0, y: 0 });
   const dragOffset = useRef({ x: 0, y: 0 });
+  const [confirmDelete, setConfirmDelete] = useState<{ userId: string; email: string } | null>(null);
   const queryClient = useQueryClient();
   const toast = useToastStore();
   const currentUser = useAuthStore((s) => s.user);
@@ -26,10 +26,10 @@ export default function UsersPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
       setShowModal(false);
-      setForm({ email: '', password: '', name: '', role: 'STUDIO_VIEWER' });
-      toast.show('사용자가 생성되었습니다', 'success');
+      setForm({ email: '', password: '', name: '' });
+      toast.show('User created successfully', 'success');
     },
-    onError: (err: any) => { toast.show(err.response?.data?.message || '생성 실패', 'error'); },
+    onError: (err: any) => { toast.show(err.response?.data?.message || 'Failed to create user', 'error'); },
   });
 
   const deleteMutation = useMutation({
@@ -37,27 +37,32 @@ export default function UsersPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
       setConfirmDelete(null);
-      toast.show('사용자가 삭제되었습니다', 'success');
+      toast.show('User deleted successfully', 'success');
     },
-    onError: (err: any) => { toast.show(err.response?.data?.message || '삭제 실패', 'error'); },
+    onError: (err: any) => { toast.show(err.response?.data?.message || 'Failed to delete user', 'error'); },
   });
 
   const resetPasswordMutation = useMutation({
     mutationFn: (userId: string) => api.post(`/users/${userId}/reset-password`),
-    onSuccess: () => {
-      toast.show('임시 비밀번호가 이메일로 발송되었습니다', 'success');
-    },
-    onError: (err: any) => { toast.show(err.response?.data?.message || '비밀번호 초기화 실패', 'error'); },
+    onSuccess: () => { toast.show('Temporary password sent to user email', 'success'); },
+    onError: (err: any) => { toast.show(err.response?.data?.message || 'Failed to reset password', 'error'); },
   });
 
-  const handleSubmit = (e: React.FormEvent) => { e.preventDefault(); createMutation.mutate(form); };
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    createMutation.mutate({ ...form, role: 'STUDIO_VIEWER' });
+  };
+
   const handleMouseDown = (e: React.MouseEvent) => {
     const tag = (e.target as HTMLElement).tagName;
     if (['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON', 'A'].includes(tag)) return;
     setIsDragging(true);
-    dragOffset.current = { x: e.clientX - modalPos.x, y: e.clientY - modalPos.y };
+    dragOffset.current = { x: e.clientX - dragPos.x, y: e.clientY - dragPos.y };
   };
-  const handleMouseMove = (e: React.MouseEvent) => { if (!isDragging) return; setModalPos({ x: e.clientX - dragOffset.current.x, y: e.clientY - dragOffset.current.y }); };
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging) return;
+    setDragPos({ x: e.clientX - dragOffset.current.x, y: e.clientY - dragOffset.current.y });
+  };
   const handleMouseUp = () => { if (isDragging) setIsDragging(false); };
 
   const getRoleBadge = (role: string) => {
@@ -79,25 +84,25 @@ export default function UsersPage() {
         <div />
         {isSuperAdmin && (
           <button
-            onClick={() => { setModalPos({ x: 0, y: 0 }); setShowModal(true); }}
+            onClick={() => { setDragPos({ x: 0, y: 0 }); setShowModal(true); }}
             className="px-4 py-2 bg-status-purple text-white rounded-lg hover:bg-status-purple/80 text-sm font-medium transition-all"
           >
-            + 새 사용자
+            + New User
           </button>
         )}
       </div>
 
-      {isLoading ? <p className="text-txt-secondary">불러오는 중..</p> : (
+      {isLoading ? <p className="text-txt-secondary">Loading...</p> : (
         <div className="bg-geo-card border border-geo-border rounded-xl overflow-hidden">
           <table className="w-full">
             <thead>
               <tr className="border-b border-geo-border">
-                <th className="px-6 py-3 text-left text-xs font-semibold text-txt-secondary uppercase tracking-wider">이름</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-txt-secondary uppercase tracking-wider">이메일</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-txt-secondary uppercase tracking-wider">역할</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-txt-secondary uppercase tracking-wider">상태</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-txt-secondary uppercase tracking-wider">마지막 로그인</th>
-                {isSuperAdmin && <th className="px-6 py-3 text-left text-xs font-semibold text-txt-secondary uppercase tracking-wider">관리</th>}
+                <th className="px-6 py-3 text-left text-xs font-semibold text-txt-secondary uppercase tracking-wider">Name</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-txt-secondary uppercase tracking-wider">Email</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-txt-secondary uppercase tracking-wider">Role</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-txt-secondary uppercase tracking-wider">Status</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-txt-secondary uppercase tracking-wider">Last Login</th>
+                {isSuperAdmin && <th className="px-6 py-3 text-left text-xs font-semibold text-txt-secondary uppercase tracking-wider">Actions</th>}
               </tr>
             </thead>
             <tbody>
@@ -120,14 +125,14 @@ export default function UsersPage() {
                           disabled={resetPasswordMutation.isPending}
                           className="px-2.5 py-1 text-xs font-medium text-status-blue border border-status-blue/30 rounded hover:bg-status-blue/10 transition-all disabled:opacity-50"
                         >
-                          비밀번호 초기화
+                          Reset PW
                         </button>
                         {u.role !== 'super_admin' && (
                           <button
                             onClick={() => setConfirmDelete({ userId: u.user_id, email: u.email })}
                             className="px-2.5 py-1 text-xs font-medium text-status-red border border-status-red/30 rounded hover:bg-status-red/10 transition-all"
                           >
-                            삭제
+                            Delete
                           </button>
                         )}
                       </div>
@@ -136,7 +141,7 @@ export default function UsersPage() {
                 </tr>
               ))}
               {!users?.length && (
-                <tr><td colSpan={6} className="px-6 py-8 text-center text-txt-muted">사용자가 없습니다</td></tr>
+                <tr><td colSpan={6} className="px-6 py-8 text-center text-txt-muted">No users found</td></tr>
               )}
             </tbody>
           </table>
@@ -147,18 +152,18 @@ export default function UsersPage() {
       {confirmDelete && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center px-4">
           <div className="bg-geo-card border border-geo-border rounded-xl w-full max-w-sm p-6">
-            <h3 className="text-base font-semibold text-txt-primary mb-2">사용자 삭제</h3>
+            <h3 className="text-base font-semibold text-txt-primary mb-2">Delete User</h3>
             <p className="text-sm text-txt-secondary mb-6">
-              <span className="text-status-red font-medium">{confirmDelete.email}</span> 계정을 완전히 삭제합니다. 이 작업은 되돌릴 수 없습니다.
+              Delete <span className="text-status-red font-medium">{confirmDelete.email}</span>? This action cannot be undone.
             </p>
             <div className="flex justify-end gap-3">
-              <button onClick={() => setConfirmDelete(null)} className="px-4 py-2 text-sm text-txt-secondary border border-geo-border rounded-lg hover:border-geo-border-hover transition-all">취소</button>
+              <button onClick={() => setConfirmDelete(null)} className="px-4 py-2 text-sm text-txt-secondary border border-geo-border rounded-lg hover:border-geo-border-hover transition-all">Cancel</button>
               <button
                 onClick={() => deleteMutation.mutate(confirmDelete.userId)}
                 disabled={deleteMutation.isPending}
                 className="px-4 py-2 text-sm font-medium bg-status-red text-white rounded-lg hover:bg-status-red/80 transition-all disabled:opacity-50"
               >
-                {deleteMutation.isPending ? '삭제 중...' : '삭제'}
+                {deleteMutation.isPending ? 'Deleting...' : 'Delete'}
               </button>
             </div>
           </div>
@@ -167,41 +172,43 @@ export default function UsersPage() {
 
       {/* Create User Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center px-4 pb-4" onMouseMove={handleMouseMove} onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp}>
+        <div
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center px-4 pb-4"
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
+          onMouseLeave={handleMouseUp}
+        >
           <div
             className="bg-geo-card border border-geo-border rounded-xl w-full max-w-sm flex flex-col cursor-move select-none"
-            style={{ maxHeight: '85vh', transform: `translate(${modalPos.x}px, ${modalPos.y}px)` }}
+            style={{
+              maxHeight: '85vh',
+              transform: dragPos.x !== 0 || dragPos.y !== 0 ? `translate(${dragPos.x}px, ${dragPos.y}px)` : undefined,
+            }}
             onMouseDown={handleMouseDown}
           >
             <div className="bg-geo-main px-6 py-3 border-b border-geo-border rounded-t-xl flex-shrink-0">
-              <h2 className="text-lg font-semibold text-txt-primary">새 사용자 생성</h2>
+              <h2 className="text-lg font-semibold text-txt-primary">New User</h2>
             </div>
             <form onSubmit={handleSubmit} className="p-6 overflow-y-auto">
               <div className="space-y-4">
                 <div>
-                  <label className="block text-xs text-txt-secondary mb-1.5">이름 *</label>
-                  <input placeholder="이름 입력" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="w-full px-4 py-2.5 bg-geo-main border border-geo-border rounded-lg text-txt-primary placeholder-txt-muted focus:ring-2 focus:ring-status-purple/40 outline-none" required />
+                  <label className="block text-xs text-txt-secondary mb-1.5">Name *</label>
+                  <input placeholder="Enter name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="w-full px-4 py-2.5 bg-geo-main border border-geo-border rounded-lg text-txt-primary placeholder-txt-muted focus:ring-2 focus:ring-status-purple/40 outline-none" required />
                 </div>
                 <div>
-                  <label className="block text-xs text-txt-secondary mb-1.5">이메일 *</label>
-                  <input type="email" placeholder="이메일 입력" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className="w-full px-4 py-2.5 bg-geo-main border border-geo-border rounded-lg text-txt-primary placeholder-txt-muted focus:ring-2 focus:ring-status-purple/40 outline-none" required />
+                  <label className="block text-xs text-txt-secondary mb-1.5">Email *</label>
+                  <input type="email" placeholder="Enter email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className="w-full px-4 py-2.5 bg-geo-main border border-geo-border rounded-lg text-txt-primary placeholder-txt-muted focus:ring-2 focus:ring-status-purple/40 outline-none" required />
                 </div>
                 <div>
-                  <label className="block text-xs text-txt-secondary mb-1.5">비밀번호 *</label>
-                  <input type="password" placeholder="비밀번호 입력" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} className="w-full px-4 py-2.5 bg-geo-main border border-geo-border rounded-lg text-txt-primary placeholder-txt-muted focus:ring-2 focus:ring-status-purple/40 outline-none" required minLength={6} />
-                </div>
-                <div>
-                  <label className="block text-xs text-txt-secondary mb-1.5">역할</label>
-                  <select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} className="w-full px-4 py-2.5 bg-geo-main border border-geo-border rounded-lg text-txt-primary focus:ring-2 focus:ring-status-purple/40 outline-none">
-                    <option value="STUDIO_VIEWER">STUDIO_VIEWER</option>
-                    <option value="STUDIO_OPERATOR">STUDIO_OPERATOR</option>
-                    <option value="STUDIO_ADMIN">STUDIO_ADMIN</option>
-                  </select>
+                  <label className="block text-xs text-txt-secondary mb-1.5">Password *</label>
+                  <input type="password" placeholder="Enter password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} className="w-full px-4 py-2.5 bg-geo-main border border-geo-border rounded-lg text-txt-primary placeholder-txt-muted focus:ring-2 focus:ring-status-purple/40 outline-none" required minLength={6} />
                 </div>
               </div>
               <div className="flex gap-2 mt-6">
-                <button type="button" onClick={() => setShowModal(false)} className="flex-1 px-4 py-2.5 border border-geo-border rounded-lg text-txt-secondary hover:text-txt-primary transition-all">취소</button>
-                <button type="submit" disabled={createMutation.isPending} className="flex-1 px-4 py-2.5 bg-status-purple text-white rounded-lg font-medium hover:bg-status-purple/80 transition-all disabled:opacity-50">생성</button>
+                <button type="button" onClick={() => setShowModal(false)} className="flex-1 px-4 py-2.5 border border-geo-border rounded-lg text-txt-secondary hover:text-txt-primary transition-all">Cancel</button>
+                <button type="submit" disabled={createMutation.isPending} className="flex-1 px-4 py-2.5 bg-status-purple text-white rounded-lg font-medium hover:bg-status-purple/80 transition-all disabled:opacity-50">
+                  {createMutation.isPending ? 'Creating...' : 'Create'}
+                </button>
               </div>
             </form>
           </div>
