@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import api from '../services/api';
 import { useToastStore } from '../stores/toast.store';
+import { useAuthStore } from '../stores/auth.store';
 
 export default function SettingsPage() {
   const { show } = useToastStore();
+  const { user } = useAuthStore();
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -48,6 +50,11 @@ export default function SettingsPage() {
       </div>
 
       <div className="max-w-[480px]">
+        <div className="bg-geo-card border border-geo-border rounded-xl p-6 mb-4">
+          <h3 className="text-xs font-semibold text-txt-muted mb-1">현재 로그인 계정</h3>
+          <p className="text-sm font-medium text-txt-primary">{user?.email}</p>
+        </div>
+
         <div className="bg-geo-card border border-geo-border rounded-xl p-6">
           <h3 className="text-sm font-semibold text-txt-primary mb-4">비밀번호 변경</h3>
 
