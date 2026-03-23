@@ -97,26 +97,26 @@ export default function UsersPage() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-geo-border">
-                <th className="px-6 py-3 text-left text-xs font-semibold text-txt-secondary uppercase tracking-wider">이름</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-txt-secondary uppercase tracking-wider">이메일</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-txt-secondary uppercase tracking-wider">역할</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-txt-secondary uppercase tracking-wider">상태</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-txt-secondary uppercase tracking-wider">마지막 로그인</th>
-                {isSuperAdmin && <th className="px-6 py-3 text-left text-xs font-semibold text-txt-secondary uppercase tracking-wider">관리</th>}
+                <th className="px-6 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">이름</th>
+                <th className="px-6 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">이메일</th>
+                <th className="px-6 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">역할</th>
+                <th className="px-6 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">상태</th>
+                <th className="px-6 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">마지막 로그인</th>
+                {isSuperAdmin && <th className="px-6 py-3 text-center text-xs font-semibold text-txt-secondary uppercase tracking-wider">관리</th>}
               </tr>
             </thead>
             <tbody>
               {users?.map((u: any) => (
                 <tr key={u.user_id} className="border-b border-geo-border/50 last:border-0 dark-table-row transition-colors">
-                  <td className="px-6 py-4 font-medium text-txt-primary">{u.name}</td>
-                  <td className="px-6 py-4 text-txt-secondary">{u.email}</td>
+                  <td className="px-6 py-4 font-medium text-txt-primary text-center">{u.name}</td>
+                  <td className="px-6 py-4 text-txt-secondary text-center">{u.email}</td>
                   <td className="px-6 py-4">
                     <span className={`px-2 py-1 rounded text-xs font-medium font-mono ${getRoleBadge(u.role)}`}>{u.role}</span>
                   </td>
                   <td className="px-6 py-4">
                     <span className={`px-2 py-1 rounded text-xs font-medium font-mono ${u.status === 'ACTIVE' ? 'bg-status-green-dim text-status-green' : 'bg-status-yellow-dim text-status-yellow'}`}>{u.status}</span>
                   </td>
-                  <td className="px-6 py-4 text-txt-muted text-sm">{u.last_login_at ? new Date(u.last_login_at).toLocaleString() : '-'}</td>
+                  <td className="px-6 py-4 text-txt-muted text-sm text-center">{u.last_login_at ? new Date(u.last_login_at).toLocaleString() : '-'}</td>
                   {isSuperAdmin && (
                     <td className="px-6 py-4">
                       <div className="flex gap-2">
@@ -217,3 +217,4 @@ export default function UsersPage() {
     </div>
   );
 }
+
