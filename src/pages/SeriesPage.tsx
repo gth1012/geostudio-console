@@ -5,19 +5,16 @@ import api from '../services/api';
 import { useToastStore } from '../stores/toast.store';
 
 const MATERIAL_OPTIONS = [
-  // Photocard
   { value: 'photocard_standard',   label: 'Photocard - Standard (Art Paper)',  carrier: 'PATTERN' },
   { value: 'photocard_premium',    label: 'Photocard - Premium (PVC/PETG)',    carrier: 'PATTERN' },
   { value: 'photocard_special',    label: 'Photocard - Special (Hologram)',    carrier: 'PATTERN' },
   { value: 'photocard_eco',        label: 'Photocard - Eco (FSC)',             carrier: 'PATTERN' },
-  // Goods
   { value: 'acrylic',              label: 'Acrylic (UV Print)',                carrier: 'ENGRAVING' },
   { value: 'metal',                label: 'Metal',                             carrier: 'ENGRAVING' },
   { value: 'fabric',               label: 'Fabric',                            carrier: 'PATTERN' },
   { value: 'ceramic_engraving',    label: 'Ceramic (Engraving)',               carrier: 'ENGRAVING' },
   { value: 'ceramic_sublimation',  label: 'Ceramic (Sublimation)',             carrier: 'PATTERN' },
   { value: 'film',                 label: 'Film (PET/PVC)',                    carrier: 'PATTERN' },
-  // Document
   { value: 'document_inkjet',      label: 'Document - Inkjet',                 carrier: 'PATTERN' },
   { value: 'document_laser',       label: 'Document - Laser',                  carrier: 'PATTERN' },
 ] as const;
@@ -50,7 +47,6 @@ interface SeriesFormData {
   dealer_id?: string;
 }
 
-// 3-step modal: dealer -> artist -> series
 type CreateStep = 'dealer' | 'artist' | 'series';
 
 interface CreateSeriesModalProps {
@@ -67,6 +63,7 @@ function CreateSeriesModal({ onClose, onSubmit, isPending, modalPos, onMouseDown
   const [step, setStep] = useState<CreateStep>('dealer');
   const [selectedDealer, setSelectedDealer] = useState<Dealer | null>(null);
   const [showNewDealer, setShowNewDealer] = useState(false);
+  const [newDealerCode, setNewDealerCode] = useState<{ code: string; name: string } | null>(null);
   const [newDealer, setNewDealer] = useState({ name: '', contact_email: '', contact_phone: '' });
   const [form, setForm] = useState<SeriesFormData>({ name: '', description: '', artistName: '', material: 'photocard_standard' });
   const [artistInput, setArtistInput] = useState('');
@@ -88,13 +85,18 @@ function CreateSeriesModal({ onClose, onSubmit, isPending, modalPos, onMouseDown
     mutationFn: (data: any) => api.post('/dealers', data),
     onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: ['dealers'] });
-      setSelectedDealer(res.data.data);
+      const dealer = res.data.data;
+      setSelectedDealer(dealer);
       setShowNewDealer(false);
       setNewDealer({ name: '', contact_email: '', contact_phone: '' });
-      setStep('artist');
-      toast.show('Dealer created.', 'success');
+      if (dealer.access_code) {
+        setNewDealerCode({ code: dealer.access_code, name: dealer.name });
+      } else {
+        setStep('artist');
+      }
+      toast.show('거래처가 등록되었습니다.', 'success');
     },
-    onError: (err: any) => toast.show(err.response?.data?.message || 'Failed to create dealer.', 'error'),
+    onError: (err: any) => toast.show(err.response?.data?.message || '거래처 등록에 실패했습니다.', 'error'),
   });
 
   const handleDealerSelect = (dealer: Dealer) => {
@@ -131,7 +133,6 @@ function CreateSeriesModal({ onClose, onSubmit, isPending, modalPos, onMouseDown
         style={{ transform: `translate(${modalPos.x}px, ${modalPos.y}px)` }}
         onMouseDown={onMouseDown}
       >
-        {/* Header */}
         <div className="bg-geo-main px-6 py-3 border-b border-geo-border rounded-t-xl flex items-center justify-between">
           <div>
             <h2 className="text-lg font-semibold text-txt-primary">새 시리즈 생성</h2>
@@ -147,7 +148,34 @@ function CreateSeriesModal({ onClose, onSubmit, isPending, modalPos, onMouseDown
           {/* Step 1: Dealer */}
           {step === 'dealer' && (
             <div className="space-y-3">
-              {!showNewDealer ? (
+              {/* Access Code 표시 (신규 거래처 등록 직후 1회) */}
+              {newDealerCode && (
+                <div className="space-y-3">
+                  <div className="px-4 py-3 rounded-lg bg-status-green/10 border border-status-green/30">
+                    <p className="text-xs font-semibold text-status-green mb-1">거래처 등록 완료</p>
+                    <p className="text-xs text-txt-secondary mb-2">{newDealerCode.name}의 전송코드입니다. 지금만 확인 가능합니다.</p>
+                    <div className="flex items-center gap-2">
+                      <code className="flex-1 px-3 py-2 bg-geo-main rounded text-sm font-mono text-status-yellow border border-geo-border break-all">
+                        {newDealerCode.code}
+                      </code>
+                      <button
+                        onClick={() => navigator.clipboard.writeText(newDealerCode.code).then(() => toast.show('복사됨', 'success'))}
+                        className="px-3 py-2 text-xs bg-status-purple text-white rounded hover:bg-status-purple/80 transition-all whitespace-nowrap"
+                      >
+                        복사
+                      </button>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => { setNewDealerCode(null); setStep('artist'); }}
+                    className="w-full py-2.5 bg-status-purple text-white rounded-lg text-sm font-medium hover:bg-status-purple/80 transition-all"
+                  >
+                    확인 후 다음 단계
+                  </button>
+                </div>
+              )}
+
+              {!newDealerCode && !showNewDealer && (
                 <>
                   <div className="space-y-2 max-h-52 overflow-y-auto">
                     {dealers?.length === 0 && (
@@ -174,7 +202,9 @@ function CreateSeriesModal({ onClose, onSubmit, isPending, modalPos, onMouseDown
                     거래처 없이 계속
                   </button>
                 </>
-              ) : (
+              )}
+
+              {!newDealerCode && showNewDealer && (
                 <div className="space-y-3">
                   <p className="text-xs font-medium text-txt-secondary">새 거래처 등록</p>
                   <input
@@ -335,20 +365,7 @@ function CreateSeriesModal({ onClose, onSubmit, isPending, modalPos, onMouseDown
   );
 }
 
-// Edit Series Modal
-interface EditSeriesModalProps {
-  form: SeriesFormData;
-  setForm: (form: SeriesFormData) => void;
-  onSubmit: (e: React.FormEvent) => void;
-  onClose: () => void;
-  isPending: boolean;
-  modalPos: { x: number; y: number };
-  onMouseDown: (e: React.MouseEvent) => void;
-  onMouseMove: (e: React.MouseEvent) => void;
-  onMouseUp: () => void;
-}
-
-function EditSeriesModal({ form, setForm, onSubmit, onClose, isPending, modalPos, onMouseDown, onMouseMove, onMouseUp }: EditSeriesModalProps) {
+function EditSeriesModal({ form, setForm, onSubmit, onClose, isPending, modalPos, onMouseDown, onMouseMove, onMouseUp }: any) {
   return createPortal(
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center px-4 overflow-y-auto" onMouseMove={onMouseMove} onMouseUp={onMouseUp} onMouseLeave={onMouseUp}>
       <div className="bg-geo-card border border-geo-border rounded-xl w-full max-w-sm cursor-move select-none" style={{ transform: `translate(${modalPos.x}px, ${modalPos.y}px)` }} onMouseDown={onMouseDown}>
@@ -362,7 +379,7 @@ function EditSeriesModal({ form, setForm, onSubmit, onClose, isPending, modalPos
           <div className="space-y-4">
             <div>
               <label className="block text-xs text-txt-secondary mb-1.5">시리즈 이름 *</label>
-              <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="시리즈 이름 입력"
+              <input value={form.name} onChange={(e: any) => setForm({ ...form, name: e.target.value })} placeholder="시리즈 이름 입력"
                 className="w-full px-4 py-2.5 bg-geo-main border border-geo-border rounded-lg text-txt-primary placeholder-txt-muted focus:ring-2 focus:ring-status-purple/40 outline-none" autoFocus required />
             </div>
             <div>
@@ -371,12 +388,12 @@ function EditSeriesModal({ form, setForm, onSubmit, onClose, isPending, modalPos
             </div>
             <div>
               <label className="block text-xs text-txt-secondary mb-1.5">아티스트</label>
-              <input value={form.artistName} onChange={(e) => setForm({ ...form, artistName: e.target.value })} placeholder="아티스트명(수정가능)"
+              <input value={form.artistName} onChange={(e: any) => setForm({ ...form, artistName: e.target.value })} placeholder="아티스트명(수정가능)"
                 className="w-full px-4 py-2.5 bg-geo-main border border-geo-border rounded-lg text-txt-primary placeholder-txt-muted focus:ring-2 focus:ring-status-purple/40 outline-none" />
             </div>
             <div>
               <label className="block text-xs text-txt-secondary mb-1.5">재질 *</label>
-              <select value={form.material} onChange={(e) => setForm({ ...form, material: e.target.value })} className="w-full px-4 py-2.5 bg-geo-main border border-geo-border rounded-lg text-txt-primary focus:ring-2 focus:ring-status-purple/40 outline-none" required>
+              <select value={form.material} onChange={(e: any) => setForm({ ...form, material: e.target.value })} className="w-full px-4 py-2.5 bg-geo-main border border-geo-border rounded-lg text-txt-primary focus:ring-2 focus:ring-status-purple/40 outline-none" required>
                 <optgroup label="— 포토카드 —">
                   <option value="photocard_standard">포토카드 - Standard (아트지)</option>
                   <option value="photocard_premium">포토카드 - Premium (PVC/PETG)</option>
@@ -400,7 +417,7 @@ function EditSeriesModal({ form, setForm, onSubmit, onClose, isPending, modalPos
             </div>
             <div>
               <label className="block text-xs text-txt-secondary mb-1.5">설명</label>
-              <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="설명 (선택)"
+              <textarea value={form.description} onChange={(e: any) => setForm({ ...form, description: e.target.value })} placeholder="설명 (선택)"
                 className="w-full px-4 py-2.5 bg-geo-main border border-geo-border rounded-lg text-txt-primary placeholder-txt-muted focus:ring-2 focus:ring-status-purple/40 outline-none resize-none" rows={2} />
             </div>
           </div>
@@ -417,7 +434,6 @@ function EditSeriesModal({ form, setForm, onSubmit, onClose, isPending, modalPos
   );
 }
 
-// Main SeriesPage component
 export default function SeriesPage() {
   const [showModal, setShowModal] = useState(false);
   const [showTrash, setShowTrash] = useState(false);
@@ -467,7 +483,6 @@ export default function SeriesPage() {
   const permanentDeleteMutation = useMutation({ mutationFn: (seriesId: string) => api.delete(`/series/${seriesId}/permanent`), onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['series-trash'] }); toast.show('시리즈가 영구 삭제되었습니다.', 'success'); }, onError: (err: any) => { toast.show(err.response?.data?.message || '영구 삭제 실패.', 'error'); } });
 
   const handleUpdate = (e: React.FormEvent) => { e.preventDefault(); if (!editTarget || updateMutation.isPending) return; updateMutation.mutate({ id: editTarget.series_id, data: editForm }); };
-
   const handleDeactivate = (id: string, name: string) => { setConfirmModal({ show: true, message: `"${name}" 시리즈를 비활성화할까요?`, confirmBtnClass: 'bg-status-yellow-dim text-status-yellow hover:bg-status-yellow/20', onConfirm: () => { archiveMutation.mutate(id); setConfirmModal({ ...confirmModal, show: false }); } }); };
   const handleActivate = (id: string, name: string) => { setConfirmModal({ show: true, message: `"${name}" 시리즈를 활성화할까요?`, onConfirm: () => { activateMutation.mutate(id); setConfirmModal({ ...confirmModal, show: false }); } }); };
   const handleDelete = (id: string, name: string) => { setConfirmModal({ show: true, message: `"${name}" 시리즈를 휴지통으로 이동할까요?`, onConfirm: () => { deleteMutation.mutate(id); setConfirmModal({ ...confirmModal, show: false }); } }); };
