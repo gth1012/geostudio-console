@@ -2,7 +2,7 @@
 import { useAuthStore } from '../stores/auth.store';
 
 const api = axios.create({
-  baseURL: 'https://geostudio-api-production.up.railway.app/api',
+  baseURL: 'https://geo-api.artionchain.com/api',
   headers: {
     'Content-Type': 'application/json',
   },
@@ -28,5 +28,3 @@ api.interceptors.response.use(
 );
 
 export default api;
-
-
