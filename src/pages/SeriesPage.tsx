@@ -16,7 +16,7 @@ const MATERIAL_OPTIONS = [
   { value: 'ceramic_sublimation',label: '세라믹 (서브리메이션)',           carrier: 'PATTERN' },
   { value: 'film',               label: '필름 (PET/PVC)',                carrier: 'PATTERN' },
   { value: 'digital_monitor',    label: '디지털 (모니터/스크린)',          carrier: 'PATTERN' },
-] as const;
+];
 
 const materialCarrier = (v: string) => MATERIAL_OPTIONS.find(o => o.value === v)?.carrier || 'PATTERN';
 
@@ -105,20 +105,8 @@ function CreateSeriesModal({ onClose, onSubmit, isPending, modalPos, onMouseDown
   const stepLabel = { dealer: '1/3 기획사 선택', artist: '2/3 아티스트', series: '3/3 시리즈 정보' };
 
   return createPortal(
-<<<<<<< HEAD
-    <div
-      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center px-4"
-      onMouseMove={onMouseMove} onMouseUp={onMouseUp} onMouseLeave={onMouseUp}
-    >
-      <div
-        className="bg-geo-card border border-geo-border rounded-xl w-full max-w-sm cursor-move select-none"
-        style={{ transform: `translate(${modalPos.x}px, ${modalPos.y}px)` }}
-        onMouseDown={onMouseDown}
-      >
-=======
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center px-4" onMouseMove={onMouseMove} onMouseUp={onMouseUp} onMouseLeave={onMouseUp}>
       <div className="bg-geo-card border border-geo-border rounded-xl w-full max-w-sm cursor-move select-none" style={{ transform: `translate(${modalPos.x}px, ${modalPos.y}px)` }} onMouseDown={onMouseDown}>
->>>>>>> 5508799
         <div className="bg-geo-main px-6 py-3 border-b border-geo-border rounded-t-xl flex items-center justify-between">
           <div>
             <h2 className="text-lg font-semibold text-txt-primary">새 시리즈 생성</h2>
@@ -129,10 +117,6 @@ function CreateSeriesModal({ onClose, onSubmit, isPending, modalPos, onMouseDown
           </button>
         </div>
         <div className="p-6" style={{ maxHeight: 'calc(100vh - 160px)', overflowY: 'auto' }}>
-<<<<<<< HEAD
-
-=======
->>>>>>> 5508799
           {step === 'dealer' && (
             <div className="space-y-3">
               {!showNewDealer ? (
@@ -163,10 +147,6 @@ function CreateSeriesModal({ onClose, onSubmit, isPending, modalPos, onMouseDown
               )}
             </div>
           )}
-<<<<<<< HEAD
-
-=======
->>>>>>> 5508799
           {step === 'artist' && (
             <div className="space-y-3">
               {selectedDealer && <div className="px-3 py-2 rounded-lg bg-status-purple/5 border border-status-purple/20 text-xs text-status-purple">기획사: {selectedDealer.name}</div>}
@@ -190,10 +170,6 @@ function CreateSeriesModal({ onClose, onSubmit, isPending, modalPos, onMouseDown
               </div>
             </div>
           )}
-<<<<<<< HEAD
-
-=======
->>>>>>> 5508799
           {step === 'series' && (
             <form onSubmit={handleSubmit} className="space-y-4">
               {selectedDealer && <div className="px-3 py-2 rounded-lg bg-status-purple/5 border border-status-purple/20 text-xs text-status-purple">{selectedDealer.name} {form.artistName && `· ${form.artistName}`}</div>}
@@ -245,10 +221,6 @@ function CreateSeriesModal({ onClose, onSubmit, isPending, modalPos, onMouseDown
   );
 }
 
-<<<<<<< HEAD
-// ─── 수정 모달 ────────────────────────────────────────────────────────────────
-=======
->>>>>>> 5508799
 interface EditSeriesModalProps {
   form: SeriesFormData;
   setForm: (form: SeriesFormData) => void;
@@ -355,20 +327,47 @@ export default function SeriesPage() {
   const permanentDeleteMutation = useMutation({ mutationFn: (seriesId: string) => api.delete(`/series/${seriesId}/permanent`), onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['series-trash'] }); toast.show('시리즈가 영구 삭제되었습니다', 'success'); }, onError: (err: any) => { toast.show(err.response?.data?.message || '영구 삭제 실패', 'error'); } });
 
   const handleUpdate = (e: React.FormEvent) => { e.preventDefault(); if (!editTarget || updateMutation.isPending) return; updateMutation.mutate({ id: editTarget.series_id, data: editForm }); };
-  const handleDeactivate = (id: string, name: string) => { setConfirmModal({ show: true, message: `"${name}" 시리즈를 비활성화 하시겠습니까?`, confirmBtnClass: 'bg-status-yellow-dim text-status-yellow hover:bg-status-yellow/20', onConfirm: () => { archiveMutation.mutate(id); setConfirmModal({ ...confirmModal, show: false }); } }); };
-  const handleActivate = (id: string, name: string) => { setConfirmModal({ show: true, message: `"${name}" 시리즈를 활성화 하시겠습니까?`, onConfirm: () => { activateMutation.mutate(id); setConfirmModal({ ...confirmModal, show: false }); } }); };
-  const handleDelete = (id: string, name: string) => { setConfirmModal({ show: true, message: `"${name}" 시리즈를 휴지통으로 이동하시겠습니까?`, onConfirm: () => { deleteMutation.mutate(id); setConfirmModal({ ...confirmModal, show: false }); } }); };
-  const handleRestore = (id: string, name: string) => { setConfirmModal({ show: true, message: `"${name}" 시리즈를 복구하시겠습니까?`, onConfirm: () => { restoreMutation.mutate(id); setConfirmModal({ ...confirmModal, show: false }); } }); };
-  const handlePermanentDelete = (id: string, name: string) => { setConfirmModal({ show: true, message: `"${name}" 시리즈를 영구 삭제하시겠습니까?`, subMessage: '이 작업은 되돌릴 수 없습니다!', onConfirm: () => { permanentDeleteMutation.mutate(id); setConfirmModal({ ...confirmModal, show: false }); } }); };
+
+  // confirmModal stale state 방지: prev 패턴 사용
+  const handleDeactivate = (id: string, name: string) => {
+    setConfirmModal({ show: true, message: `"${name}" 시리즈를 비활성화 하시겠습니까?`, confirmBtnClass: 'bg-status-yellow-dim text-status-yellow hover:bg-status-yellow/20',
+      onConfirm: () => { archiveMutation.mutate(id); setConfirmModal(prev => ({ ...prev, show: false })); } });
+  };
+  const handleActivate = (id: string, name: string) => {
+    setConfirmModal({ show: true, message: `"${name}" 시리즈를 활성화 하시겠습니까?`,
+      onConfirm: () => { activateMutation.mutate(id); setConfirmModal(prev => ({ ...prev, show: false })); } });
+  };
+  const handleDelete = (id: string, name: string) => {
+    setConfirmModal({ show: true, message: `"${name}" 시리즈를 휴지통으로 이동하시겠습니까?`,
+      onConfirm: () => { deleteMutation.mutate(id); setConfirmModal(prev => ({ ...prev, show: false })); } });
+  };
+  const handleRestore = (id: string, name: string) => {
+    setConfirmModal({ show: true, message: `"${name}" 시리즈를 복구하시겠습니까?`,
+      onConfirm: () => { restoreMutation.mutate(id); setConfirmModal(prev => ({ ...prev, show: false })); } });
+  };
+  const handlePermanentDelete = (id: string, name: string) => {
+    setConfirmModal({ show: true, message: `"${name}" 시리즈를 영구 삭제하시겠습니까?`, subMessage: '이 작업은 되돌릴 수 없습니다!',
+      onConfirm: () => { permanentDeleteMutation.mutate(id); setConfirmModal(prev => ({ ...prev, show: false })); } });
+  };
+
   const handleMouseDown = (e: React.MouseEvent) => { const tag = (e.target as HTMLElement).tagName; if (['INPUT','TEXTAREA','SELECT','BUTTON','A'].includes(tag)) return; setIsDragging(true); dragOffset.current = { x: e.clientX - modalPos.x, y: e.clientY - modalPos.y }; };
   const handleMouseMove = (e: React.MouseEvent) => { if (!isDragging) return; setModalPos({ x: e.clientX - dragOffset.current.x, y: e.clientY - dragOffset.current.y }); };
   const handleMouseUp = () => { if (isDragging) setIsDragging(false); };
   const handleEditMouseDown = (e: React.MouseEvent) => { const tag = (e.target as HTMLElement).tagName; if (['INPUT','TEXTAREA','SELECT','BUTTON','A'].includes(tag)) return; setIsEditDragging(true); editDragOffset.current = { x: e.clientX - editModalPos.x, y: e.clientY - editModalPos.y }; };
   const handleEditMouseMove = (e: React.MouseEvent) => { if (!isEditDragging) return; setEditModalPos({ x: e.clientX - editDragOffset.current.x, y: e.clientY - editDragOffset.current.y }); };
   const handleEditMouseUp = () => { if (isEditDragging) setIsEditDragging(false); };
-  const openEditModal = (s: any) => { setEditModalPos({ x: 0, y: 0 }); setEditTarget({ series_id: s.series_id }); setEditForm({ name: s.name || '', code: s.code || '', description: s.description || '', artistName: s.artist_name || '', material: s.material || 'paper_art' }); };
 
-  const isActionPending = archiveMutation.isPending || activateMutation.isPending || deleteMutation.isPending || restoreMutation.isPending || permanentDeleteMutation.isPending;
+  // paper_art 레거시 fallback → photocard_standard 로 통일
+  const openEditModal = (s: any) => {
+    setEditModalPos({ x: 0, y: 0 });
+    setEditTarget({ series_id: s.series_id });
+    const validMaterials = MATERIAL_OPTIONS.map(o => o.value);
+    const material = validMaterials.includes(s.material) ? s.material : 'photocard_standard';
+    setEditForm({ name: s.name || '', code: s.code || '', description: s.description || '', artistName: s.artist_name || '', material });
+  };
+
+  // updateMutation.isPending 추가
+  const isActionPending = archiveMutation.isPending || activateMutation.isPending || deleteMutation.isPending || restoreMutation.isPending || permanentDeleteMutation.isPending || updateMutation.isPending;
   const displayData = showTrash ? trashedSeries : series;
   const isDataLoading = showTrash ? isTrashLoading : isLoading;
 
@@ -397,13 +396,7 @@ export default function SeriesPage() {
               </tr>
             </thead>
             <tbody>
-<<<<<<< HEAD
-              {displayData?.length === 0 ? (
-                <tr><td colSpan={6}></td></tr>
-              ) : (
-=======
-              {displayData?.length === 0 ? <tr><td colSpan={6}></td></tr> : (
->>>>>>> 5508799
+              {displayData?.length === 0 ? <tr><td colSpan={7}></td></tr> : (
                 displayData?.map((s: any) => (
                   <tr key={s.series_id} className="border-b border-geo-border/50 last:border-0 dark-table-row transition-colors">
                     <td className="px-4 py-3 text-center font-mono text-sm text-status-green">{s.display_id || '-'}</td>
@@ -465,7 +458,7 @@ export default function SeriesPage() {
             <p className="text-txt-primary text-center mb-2">{confirmModal.message}</p>
             {confirmModal.subMessage && <p className="text-status-red text-sm text-center mb-4">{confirmModal.subMessage}</p>}
             <div className="flex gap-3 mt-6">
-              <button onClick={() => setConfirmModal({ ...confirmModal, show: false })} className="flex-1 px-4 py-2.5 border border-geo-border rounded-lg text-txt-secondary hover:text-txt-primary hover:border-geo-border-hover transition-all">취소</button>
+              <button onClick={() => setConfirmModal(prev => ({ ...prev, show: false }))} className="flex-1 px-4 py-2.5 border border-geo-border rounded-lg text-txt-secondary hover:text-txt-primary hover:border-geo-border-hover transition-all">취소</button>
               <button onClick={confirmModal.onConfirm} className={`flex-1 px-4 py-2.5 rounded-lg font-medium transition-all ${confirmModal.confirmBtnClass || 'bg-purple-500 text-white hover:bg-purple-500/80'}`}>확인</button>
             </div>
           </div>
@@ -474,8 +467,4 @@ export default function SeriesPage() {
       )}
     </div>
   );
-<<<<<<< HEAD
 }
-=======
-}
->>>>>>> 5508799
