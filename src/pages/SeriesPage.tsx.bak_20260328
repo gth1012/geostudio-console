@@ -70,8 +70,6 @@ function CreateSeriesModal({ onClose, onSubmit, isPending, modalPos, onMouseDown
   const [newDealer, setNewDealer] = useState({ name: '', contact_email: '', contact_phone: '' });
   const [form, setForm] = useState<SeriesFormData>({ name: '', description: '', artistName: '', material: 'photocard_standard' });
   const [artistInput, setArtistInput] = useState('');
-  const [newDealerAccessCode, setNewDealerAccessCode] = useState<string | null>(null);
-  const [codeCopied, setCodeCopied] = useState(false);
   const queryClient = useQueryClient();
   const toast = useToastStore();
 
@@ -90,35 +88,14 @@ function CreateSeriesModal({ onClose, onSubmit, isPending, modalPos, onMouseDown
     mutationFn: (data: any) => api.post('/dealers', data),
     onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: ['dealers'] });
-      const dealer = res.data.data;
-      setSelectedDealer({ dealer_id: dealer.dealer_id, name: dealer.name, contact_email: dealer.contact_email });
+      setSelectedDealer(res.data.data);
       setShowNewDealer(false);
       setNewDealer({ name: '', contact_email: '', contact_phone: '' });
-      // access_code 발급 시 모달에 표시
-      if (dealer.access_code) {
-        setNewDealerAccessCode(dealer.access_code);
-      } else {
-        setStep('artist');
-        toast.show('기획사가 등록되었습니다', 'success');
-      }
+      setStep('artist');
+      toast.show('기획사가 등록되었습니다', 'success');
     },
     onError: (err: any) => toast.show(err.response?.data?.message || '기획사 등록 실패', 'error'),
   });
-
-  const handleCopyCode = () => {
-    if (newDealerAccessCode) {
-      navigator.clipboard.writeText(newDealerAccessCode).then(() => {
-        setCodeCopied(true);
-        setTimeout(() => setCodeCopied(false), 2000);
-      });
-    }
-  };
-
-  const handleCodeConfirmed = () => {
-    setNewDealerAccessCode(null);
-    setStep('artist');
-    toast.show('기획사가 등록되었습니다', 'success');
-  };
 
   const handleDealerSelect = (dealer: Dealer) => { setSelectedDealer(dealer); setStep('artist'); };
   const handleSkipDealer = () => { setSelectedDealer(null); setStep('artist'); };
@@ -133,145 +110,109 @@ function CreateSeriesModal({ onClose, onSubmit, isPending, modalPos, onMouseDown
         <div className="bg-geo-main px-6 py-3 border-b border-geo-border rounded-t-xl flex items-center justify-between">
           <div>
             <h2 className="text-lg font-semibold text-txt-primary">새 시리즈 생성</h2>
-            <p className="text-xs text-txt-muted mt-0.5">{newDealerAccessCode ? '기획사 전송코드 발급' : stepLabel[step]}</p>
+            <p className="text-xs text-txt-muted mt-0.5">{stepLabel[step]}</p>
           </div>
           <button onClick={onClose} className="w-7 h-7 flex items-center justify-center rounded-lg text-txt-muted hover:text-txt-primary hover:bg-geo-card-hover transition-all">
             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12" /></svg>
           </button>
         </div>
         <div className="p-6" style={{ maxHeight: 'calc(100vh - 160px)', overflowY: 'auto' }}>
-
-          {/* access_code 발급 화면 */}
-          {newDealerAccessCode ? (
-            <div className="space-y-4">
-              <div className="px-3 py-2 rounded-lg bg-status-green/5 border border-status-green/20">
-                <p className="text-xs text-status-green font-medium mb-1">✅ 기획사 등록 완료</p>
-                <p className="text-xs text-txt-muted">전송코드가 발급되었습니다. 이 코드는 다시 확인할 수 없으니 반드시 기록해두세요.</p>
+          {step === 'dealer' && (
+            <div className="space-y-3">
+              {!showNewDealer ? (
+                <>
+                  <div className="space-y-2 max-h-52 overflow-y-auto">
+                    {dealers?.length === 0 && <p className="text-xs text-txt-muted text-center py-3">등록된 기획사가 없습니다</p>}
+                    {dealers?.map(d => (
+                      <button key={d.dealer_id} onClick={() => handleDealerSelect(d)} className="w-full text-left p-3 rounded-lg border border-geo-border hover:border-status-purple hover:bg-status-purple/5 transition-all">
+                        <p className="text-sm font-medium text-txt-primary">{d.name}</p>
+                        {d.contact_email && <p className="text-xs text-txt-muted mt-0.5">{d.contact_email}</p>}
+                      </button>
+                    ))}
+                  </div>
+                  <button onClick={() => setShowNewDealer(true)} className="w-full py-2.5 border border-dashed border-status-yellow rounded-lg text-xs text-status-yellow hover:bg-[#1a1a2e] transition-all">+ 새 기획사 등록</button>
+                  <button onClick={handleSkipDealer} className="w-full text-xs text-status-yellow hover:text-yellow-300 transition-all py-1">기획사 없이 진행 →</button>
+                </>
+              ) : (
+                <div className="space-y-3">
+                  <p className="text-xs font-medium text-txt-secondary">새 기획사 등록</p>
+                  <input value={newDealer.name} onChange={e => setNewDealer(d => ({ ...d, name: e.target.value }))} placeholder="회사명 *" className="w-full px-4 py-2.5 bg-geo-main border border-geo-border rounded-lg text-txt-primary placeholder-txt-muted focus:ring-2 focus:ring-status-purple/40 outline-none text-sm" />
+                  <input value={newDealer.contact_email} onChange={e => setNewDealer(d => ({ ...d, contact_email: e.target.value }))} placeholder="이메일" type="email" className="w-full px-4 py-2.5 bg-geo-main border border-geo-border rounded-lg text-txt-primary placeholder-txt-muted focus:ring-2 focus:ring-status-purple/40 outline-none text-sm" />
+                  <input value={newDealer.contact_phone} onChange={e => setNewDealer(d => ({ ...d, contact_phone: e.target.value }))} placeholder="전화번호" className="w-full px-4 py-2.5 bg-geo-main border border-geo-border rounded-lg text-txt-primary placeholder-txt-muted focus:ring-2 focus:ring-status-purple/40 outline-none text-sm" />
+                  <div className="flex gap-2">
+                    <button onClick={() => setShowNewDealer(false)} className="flex-1 px-4 py-2.5 border border-geo-border rounded-lg text-txt-secondary text-sm hover:text-txt-primary transition-all">취소</button>
+                    <button onClick={() => createDealerMutation.mutate(newDealer)} disabled={!newDealer.name || createDealerMutation.isPending} className="flex-1 px-4 py-2.5 bg-status-purple text-white rounded-lg text-sm font-medium hover:bg-status-purple/80 disabled:opacity-50 transition-all">{createDealerMutation.isPending ? '등록 중...' : '등록'}</button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+          {step === 'artist' && (
+            <div className="space-y-3">
+              {selectedDealer && <div className="px-3 py-2 rounded-lg bg-status-purple/5 border border-status-purple/20 text-xs text-status-purple">기획사: {selectedDealer.name}</div>}
+              <div>
+                <label className="block text-xs text-txt-secondary mb-1.5">아티스트명</label>
+                <input value={artistInput} onChange={e => setArtistInput(e.target.value)} placeholder="아티스트명 입력" autoFocus className="w-full px-4 py-2.5 bg-geo-main border border-geo-border rounded-lg text-txt-primary placeholder-txt-muted focus:ring-2 focus:ring-status-purple/40 outline-none" />
+              </div>
+              {artists && artists.length > 0 && (
+                <div>
+                  <p className="text-xs text-txt-muted mb-1.5">기존 아티스트</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {artists.map(a => (
+                      <button key={a} onClick={() => setArtistInput(a)} className={`px-2.5 py-1 rounded text-xs border transition-all ${artistInput === a ? 'bg-status-purple text-white border-status-purple' : 'border-geo-border text-txt-secondary hover:border-status-purple hover:text-status-purple'}`}>{a}</button>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <div className="flex gap-2 mt-4">
+                <button onClick={() => setStep('dealer')} className="flex-1 px-4 py-2.5 border border-geo-border rounded-lg text-txt-secondary text-sm hover:text-txt-primary transition-all">이전</button>
+                <button onClick={handleArtistNext} className="flex-1 px-4 py-2.5 bg-status-purple text-white rounded-lg text-sm font-medium hover:bg-status-purple/80 transition-all">다음</button>
+              </div>
+            </div>
+          )}
+          {step === 'series' && (
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {selectedDealer && <div className="px-3 py-2 rounded-lg bg-status-purple/5 border border-status-purple/20 text-xs text-status-purple">{selectedDealer.name} {form.artistName && `· ${form.artistName}`}</div>}
+              <div>
+                <label className="block text-xs text-txt-secondary mb-1.5">시리즈 이름 *</label>
+                <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="시리즈 이름 입력" autoFocus required className="w-full px-4 py-2.5 bg-geo-main border border-geo-border rounded-lg text-txt-primary placeholder-txt-muted focus:ring-2 focus:ring-status-purple/40 outline-none" />
               </div>
               <div>
-                <p className="text-xs text-txt-secondary mb-2">전송코드 (Agency Console 최초 등록 시 사용)</p>
-                <div className="flex items-center gap-2">
-                  <div className="flex-1 px-4 py-3 bg-geo-main border border-status-green/30 rounded-lg font-mono text-status-green text-sm tracking-widest text-center select-all">
-                    {newDealerAccessCode}
-                  </div>
-                  <button
-                    onClick={handleCopyCode}
-                    className="px-3 py-3 bg-status-green-dim text-status-green rounded-lg text-xs hover:bg-status-green/20 transition-all whitespace-nowrap"
-                  >
-                    {codeCopied ? '복사됨!' : '복사'}
-                  </button>
-                </div>
+                <label className="block text-xs text-txt-secondary mb-1.5">아티스트</label>
+                <input value={form.artistName} onChange={e => setForm(f => ({ ...f, artistName: e.target.value }))} placeholder="아티스트명 (선택)" className="w-full px-4 py-2.5 bg-geo-main border border-geo-border rounded-lg text-txt-primary placeholder-txt-muted focus:ring-2 focus:ring-status-purple/40 outline-none" />
               </div>
-              <div className="px-3 py-2 rounded-lg bg-status-red/5 border border-status-red/20">
-                <p className="text-xs text-status-red">⚠️ 이 코드는 최초 1회만 표시됩니다. 지금 복사해두세요.</p>
+              <div>
+                <label className="block text-xs text-txt-secondary mb-1.5">재질 *</label>
+                <select value={form.material} onChange={e => setForm(f => ({ ...f, material: e.target.value }))} required className="w-full px-4 py-2.5 bg-geo-main border border-geo-border rounded-lg text-txt-primary focus:ring-2 focus:ring-status-purple/40 outline-none">
+                  <optgroup label="── 포토카드 ──">
+                    <option value="photocard_standard">포토카드 - Standard (아트지)</option>
+                    <option value="photocard_premium">포토카드 - Premium (PVC/PETG)</option>
+                    <option value="photocard_special">포토카드 - Special (홀로그램)</option>
+                    <option value="photocard_eco">포토카드 - Eco (친환경/FSC)</option>
+                  </optgroup>
+                  <optgroup label="── 굿즈 ──">
+                    <option value="acrylic">아크릴 (UV인쇄)</option>
+                    <option value="metal">금속</option>
+                    <option value="fabric">직물</option>
+                    <option value="ceramic_engraving">세라믹 (각인)</option>
+                    <option value="ceramic_sublimation">세라믹 (서브리메이션)</option>
+                    <option value="film">필름 (PET/PVC)</option>
+                  </optgroup>
+                  <optgroup label="── 테스트 ──">
+                    <option value="digital_monitor">디지털 (모니터/스크린)</option>
+                  </optgroup>
+                </select>
+                <CarrierGuideText material={form.material} />
               </div>
-              <button
-                onClick={handleCodeConfirmed}
-                className="w-full px-4 py-2.5 bg-status-purple text-white rounded-lg text-sm font-medium hover:bg-status-purple/80 transition-all"
-              >
-                확인했습니다 → 다음 단계
-              </button>
-            </div>
-          ) : (
-            <>
-              {step === 'dealer' && (
-                <div className="space-y-3">
-                  {!showNewDealer ? (
-                    <>
-                      <div className="space-y-2 max-h-52 overflow-y-auto">
-                        {dealers?.length === 0 && <p className="text-xs text-txt-muted text-center py-3">등록된 기획사가 없습니다</p>}
-                        {dealers?.map(d => (
-                          <button key={d.dealer_id} onClick={() => handleDealerSelect(d)} className="w-full text-left p-3 rounded-lg border border-geo-border hover:border-status-purple hover:bg-status-purple/5 transition-all">
-                            <p className="text-sm font-medium text-txt-primary">{d.name}</p>
-                            {d.contact_email && <p className="text-xs text-txt-muted mt-0.5">{d.contact_email}</p>}
-                          </button>
-                        ))}
-                      </div>
-                      <button onClick={() => setShowNewDealer(true)} className="w-full py-2.5 border border-dashed border-status-yellow rounded-lg text-xs text-status-yellow hover:bg-[#1a1a2e] transition-all">+ 새 기획사 등록</button>
-                      <button onClick={handleSkipDealer} className="w-full text-xs text-status-yellow hover:text-yellow-300 transition-all py-1">기획사 없이 진행 →</button>
-                    </>
-                  ) : (
-                    <div className="space-y-3">
-                      <p className="text-xs font-medium text-txt-secondary">새 기획사 등록</p>
-                      <input value={newDealer.name} onChange={e => setNewDealer(d => ({ ...d, name: e.target.value }))} placeholder="회사명 *" className="w-full px-4 py-2.5 bg-geo-main border border-geo-border rounded-lg text-txt-primary placeholder-txt-muted focus:ring-2 focus:ring-status-purple/40 outline-none text-sm" />
-                      <input value={newDealer.contact_email} onChange={e => setNewDealer(d => ({ ...d, contact_email: e.target.value }))} placeholder="이메일" type="email" className="w-full px-4 py-2.5 bg-geo-main border border-geo-border rounded-lg text-txt-primary placeholder-txt-muted focus:ring-2 focus:ring-status-purple/40 outline-none text-sm" />
-                      <input value={newDealer.contact_phone} onChange={e => setNewDealer(d => ({ ...d, contact_phone: e.target.value }))} placeholder="전화번호" className="w-full px-4 py-2.5 bg-geo-main border border-geo-border rounded-lg text-txt-primary placeholder-txt-muted focus:ring-2 focus:ring-status-purple/40 outline-none text-sm" />
-                      <div className="flex gap-2">
-                        <button onClick={() => setShowNewDealer(false)} className="flex-1 px-4 py-2.5 border border-geo-border rounded-lg text-txt-secondary text-sm hover:text-txt-primary transition-all">취소</button>
-                        <button onClick={() => createDealerMutation.mutate(newDealer)} disabled={!newDealer.name || createDealerMutation.isPending} className="flex-1 px-4 py-2.5 bg-status-purple text-white rounded-lg text-sm font-medium hover:bg-status-purple/80 disabled:opacity-50 transition-all">{createDealerMutation.isPending ? '등록 중...' : '등록'}</button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-              {step === 'artist' && (
-                <div className="space-y-3">
-                  {selectedDealer && <div className="px-3 py-2 rounded-lg bg-status-purple/5 border border-status-purple/20 text-xs text-status-purple">기획사: {selectedDealer.name}</div>}
-                  <div>
-                    <label className="block text-xs text-txt-secondary mb-1.5">아티스트명</label>
-                    <input value={artistInput} onChange={e => setArtistInput(e.target.value)} placeholder="아티스트명 입력" autoFocus className="w-full px-4 py-2.5 bg-geo-main border border-geo-border rounded-lg text-txt-primary placeholder-txt-muted focus:ring-2 focus:ring-status-purple/40 outline-none" />
-                  </div>
-                  {artists && artists.length > 0 && (
-                    <div>
-                      <p className="text-xs text-txt-muted mb-1.5">기존 아티스트</p>
-                      <div className="flex flex-wrap gap-1.5">
-                        {artists.map(a => (
-                          <button key={a} onClick={() => setArtistInput(a)} className={`px-2.5 py-1 rounded text-xs border transition-all ${artistInput === a ? 'bg-status-purple text-white border-status-purple' : 'border-geo-border text-txt-secondary hover:border-status-purple hover:text-status-purple'}`}>{a}</button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  <div className="flex gap-2 mt-4">
-                    <button onClick={() => setStep('dealer')} className="flex-1 px-4 py-2.5 border border-geo-border rounded-lg text-txt-secondary text-sm hover:text-txt-primary transition-all">이전</button>
-                    <button onClick={handleArtistNext} className="flex-1 px-4 py-2.5 bg-status-purple text-white rounded-lg text-sm font-medium hover:bg-status-purple/80 transition-all">다음</button>
-                  </div>
-                </div>
-              )}
-              {step === 'series' && (
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  {selectedDealer && <div className="px-3 py-2 rounded-lg bg-status-purple/5 border border-status-purple/20 text-xs text-status-purple">{selectedDealer.name} {form.artistName && `· ${form.artistName}`}</div>}
-                  <div>
-                    <label className="block text-xs text-txt-secondary mb-1.5">시리즈 이름 *</label>
-                    <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="시리즈 이름 입력" autoFocus required className="w-full px-4 py-2.5 bg-geo-main border border-geo-border rounded-lg text-txt-primary placeholder-txt-muted focus:ring-2 focus:ring-status-purple/40 outline-none" />
-                  </div>
-                  <div>
-                    <label className="block text-xs text-txt-secondary mb-1.5">아티스트</label>
-                    <input value={form.artistName} onChange={e => setForm(f => ({ ...f, artistName: e.target.value }))} placeholder="아티스트명 (선택)" className="w-full px-4 py-2.5 bg-geo-main border border-geo-border rounded-lg text-txt-primary placeholder-txt-muted focus:ring-2 focus:ring-status-purple/40 outline-none" />
-                  </div>
-                  <div>
-                    <label className="block text-xs text-txt-secondary mb-1.5">재질 *</label>
-                    <select value={form.material} onChange={e => setForm(f => ({ ...f, material: e.target.value }))} required className="w-full px-4 py-2.5 bg-geo-main border border-geo-border rounded-lg text-txt-primary focus:ring-2 focus:ring-status-purple/40 outline-none">
-                      <optgroup label="── 포토카드 ──">
-                        <option value="photocard_standard">포토카드 - Standard (아트지)</option>
-                        <option value="photocard_premium">포토카드 - Premium (PVC/PETG)</option>
-                        <option value="photocard_special">포토카드 - Special (홀로그램)</option>
-                        <option value="photocard_eco">포토카드 - Eco (친환경/FSC)</option>
-                      </optgroup>
-                      <optgroup label="── 굿즈 ──">
-                        <option value="acrylic">아크릴 (UV인쇄)</option>
-                        <option value="metal">금속</option>
-                        <option value="fabric">직물</option>
-                        <option value="ceramic_engraving">세라믹 (각인)</option>
-                        <option value="ceramic_sublimation">세라믹 (서브리메이션)</option>
-                        <option value="film">필름 (PET/PVC)</option>
-                      </optgroup>
-                      <optgroup label="── 테스트 ──">
-                        <option value="digital_monitor">디지털 (모니터/스크린)</option>
-                      </optgroup>
-                    </select>
-                    <CarrierGuideText material={form.material} />
-                  </div>
-                  <div>
-                    <label className="block text-xs text-txt-secondary mb-1.5">설명</label>
-                    <textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="설명 (선택)" rows={2} className="w-full px-4 py-2.5 bg-geo-main border border-geo-border rounded-lg text-txt-primary placeholder-txt-muted focus:ring-2 focus:ring-status-purple/40 outline-none resize-none" />
-                  </div>
-                  <div className="flex gap-2">
-                    <button type="button" onClick={() => setStep('artist')} className="flex-1 px-4 py-2.5 border border-geo-border rounded-lg text-txt-secondary hover:text-txt-primary transition-all">이전</button>
-                    <button type="submit" disabled={isPending} className="flex-1 px-4 py-2.5 bg-status-purple text-white rounded-lg font-medium hover:bg-status-purple/80 disabled:opacity-50 transition-all">{isPending ? '생성 중...' : '생성'}</button>
-                  </div>
-                </form>
-              )}
-            </>
+              <div>
+                <label className="block text-xs text-txt-secondary mb-1.5">설명</label>
+                <textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="설명 (선택)" rows={2} className="w-full px-4 py-2.5 bg-geo-main border border-geo-border rounded-lg text-txt-primary placeholder-txt-muted focus:ring-2 focus:ring-status-purple/40 outline-none resize-none" />
+              </div>
+              <div className="flex gap-2">
+                <button type="button" onClick={() => setStep('artist')} className="flex-1 px-4 py-2.5 border border-geo-border rounded-lg text-txt-secondary hover:text-txt-primary transition-all">이전</button>
+                <button type="submit" disabled={isPending} className="flex-1 px-4 py-2.5 bg-status-purple text-white rounded-lg font-medium hover:bg-status-purple/80 disabled:opacity-50 transition-all">{isPending ? '생성 중...' : '생성'}</button>
+              </div>
+            </form>
           )}
         </div>
       </div>
@@ -387,6 +328,7 @@ export default function SeriesPage() {
 
   const handleUpdate = (e: React.FormEvent) => { e.preventDefault(); if (!editTarget || updateMutation.isPending) return; updateMutation.mutate({ id: editTarget.series_id, data: editForm }); };
 
+  // confirmModal stale state 방지: prev 패턴 사용
   const handleDeactivate = (id: string, name: string) => {
     setConfirmModal({ show: true, message: `"${name}" 시리즈를 비활성화 하시겠습니까?`, confirmBtnClass: 'bg-status-yellow-dim text-status-yellow hover:bg-status-yellow/20',
       onConfirm: () => { archiveMutation.mutate(id); setConfirmModal(prev => ({ ...prev, show: false })); } });
@@ -415,6 +357,7 @@ export default function SeriesPage() {
   const handleEditMouseMove = (e: React.MouseEvent) => { if (!isEditDragging) return; setEditModalPos({ x: e.clientX - editDragOffset.current.x, y: e.clientY - editDragOffset.current.y }); };
   const handleEditMouseUp = () => { if (isEditDragging) setIsEditDragging(false); };
 
+  // paper_art 레거시 fallback → photocard_standard 로 통일
   const openEditModal = (s: any) => {
     setEditModalPos({ x: 0, y: 0 });
     setEditTarget({ series_id: s.series_id });
@@ -423,6 +366,7 @@ export default function SeriesPage() {
     setEditForm({ name: s.name || '', code: s.code || '', description: s.description || '', artistName: s.artist_name || '', material });
   };
 
+  // updateMutation.isPending 추가
   const isActionPending = archiveMutation.isPending || activateMutation.isPending || deleteMutation.isPending || restoreMutation.isPending || permanentDeleteMutation.isPending || updateMutation.isPending;
   const displayData = showTrash ? trashedSeries : series;
   const isDataLoading = showTrash ? isTrashLoading : isLoading;
