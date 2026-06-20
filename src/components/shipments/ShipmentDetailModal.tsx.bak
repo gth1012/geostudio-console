@@ -8,12 +8,9 @@ interface ShipmentAsset {
   asset_id: string;
   file_name: string;
   file_sha256: string | null;
-  geocapsule_status?: string;
   asset?: {
     dina_id: string;
     edition: number;
-    geocapsule_status?: string;
-    geocapsule_ref?: string;
   };
 }
 
@@ -118,37 +115,6 @@ export default function ShipmentDetailModal({ shipmentId, onClose }: ShipmentDet
     return map[status] || status;
   };
 
-  // 인증 캡슐 상태 집계
-  const getCapsuleStatus = () => {
-    if (!shipment?.shipmentAssets || shipment.shipmentAssets.length === 0) return null;
-    const statuses = shipment.shipmentAssets.map(sa => sa.asset?.geocapsule_status).filter(Boolean);
-    if (statuses.length === 0) return null;
-    if (statuses.every(s => s === 'READY')) return 'READY';
-    if (statuses.some(s => s === 'FAILED')) return 'FAILED';
-    if (statuses.some(s => s === 'PENDING')) return 'PENDING';
-    return null;
-  };
-
-  const getCapsuleStatusStyle = (status: string) => {
-    const map: Record<string, string> = {
-      READY: 'text-status-green',
-      PENDING: 'text-status-yellow',
-      FAILED: 'text-status-red',
-    };
-    return map[status] || 'text-txt-secondary';
-  };
-
-  const getCapsuleStatusLabel = (status: string) => {
-    const map: Record<string, string> = {
-      READY: 'READY',
-      PENDING: '생성 중',
-      FAILED: '생성 실패',
-    };
-    return map[status] || status;
-  };
-
-  const capsuleStatus = getCapsuleStatus();
-
   const originalCount = shipment?.shipmentAssets
     ? new Set(shipment.shipmentAssets.map(sa => sa.file_name.split('_')[0])).size
     : 0;
@@ -221,18 +187,6 @@ export default function ShipmentDetailModal({ shipmentId, onClose }: ShipmentDet
               <p className="text-base font-semibold text-status-green">{totalCount}개</p>
             </div>
           </div>
-
-          {/* 그룹 3: 인증 캡슐 상태 - 출고확정 후에만 표시 */}
-          {shipment.status === 'SHIPPED' && capsuleStatus && (
-            <div className="bg-geo-main border border-geo-border rounded-lg px-4 py-3">
-              <div className="flex items-center justify-between">
-                <span className="text-base text-status-purple">인증 캡슐</span>
-                <span className={`text-base font-semibold ${getCapsuleStatusStyle(capsuleStatus)}`}>
-                  ● {getCapsuleStatusLabel(capsuleStatus)}
-                </span>
-              </div>
-            </div>
-          )}
 
           {/* 상태 표시 - SHIPPED/VOID/DRAFT */}
           {(shipment.status === 'SHIPPED' || shipment.status === 'VOID' || shipment.status === 'DRAFT') && (

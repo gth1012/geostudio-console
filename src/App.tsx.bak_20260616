@@ -15,7 +15,6 @@ import UsersPage from './pages/UsersPage';
 import AuditPage from './pages/AuditPage';
 import SystemAdminPage from './pages/SystemAdminPage';
 import SettingsPage from './pages/SettingsPage';
-import DigitalPage from './pages/DigitalPage';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuthStore();
@@ -50,7 +49,6 @@ export default function App() {
             <Route path="audit" element={<AuditPage />} />
             <Route path="system-admin" element={<SystemAdminPage />} />
             <Route path="settings" element={<SettingsPage />} />
-            <Route path="digital" element={<DigitalPage />} />
           </Route>
         </Routes>
       </HashRouter>

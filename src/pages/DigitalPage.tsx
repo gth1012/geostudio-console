@@ -1,0 +1,226 @@
+import { useState, useRef, useCallback } from 'react';
+
+const API_BASE = 'https://geo-api.artionchain.com/api';
+
+interface AssetInfo {
+  dina_id: string;
+  series: string;
+  artist: string;
+  publisher: string;
+  edition: string;
+  status: string;
+}
+
+interface DetectResult {
+  status: 'ORIGINAL' | 'MODIFIED' | 'INVALID' | 'ERROR';
+  score: number;
+  pearson_r: number;
+  dot_score: number;
+  message: string;
+  asset?: AssetInfo;
+}
+
+export default function DigitalPage() {
+  const [file, setFile] = useState<File | null>(null);
+  const [preview, setPreview] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState<DetectResult | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [dragging, setDragging] = useState(false);
+  const [showDetail, setShowDetail] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const applyFile = (f: File) => {
+    setFile(f);
+    setPreview(URL.createObjectURL(f));
+    setResult(null);
+    setError(null);
+    setShowDetail(false);
+  };
+
+  const handleReset = () => {
+    setFile(null);
+    setPreview(null);
+    setResult(null);
+    setError(null);
+    setShowDetail(false);
+    if (fileRef.current) fileRef.current.value = '';
+  };
+
+  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    if (f) applyFile(f);
+  };
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setDragging(false);
+    const f = e.dataTransfer.files?.[0];
+    if (f) applyFile(f);
+  }, []);
+
+  const handleDragOver = (e: React.DragEvent) => { e.preventDefault(); setDragging(true); };
+  const handleDragLeave = () => setDragging(false);
+
+  const handleSubmit = async () => {
+    if (!file) return;
+    setLoading(true);
+    setError(null);
+    setResult(null);
+    setShowDetail(false);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await fetch(`${API_BASE}/digital/detect`, { method: 'POST', body: formData });
+      const json = await res.json();
+      setResult(json);
+    } catch (err) {
+      setError(String(err));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const statusColor = (s: string) => ({ ORIGINAL: '#4ADE80', MODIFIED: '#FBBF24', INVALID: '#F87171' }[s] || '#7B798E');
+  const statusBg   = (s: string) => ({ ORIGINAL: 'rgba(74,222,128,0.15)', MODIFIED: 'rgba(251,191,36,0.15)', INVALID: 'rgba(248,113,113,0.15)' }[s] || 'rgba(123,121,142,0.15)');
+  const statusMsg  = (s: string) => ({ ORIGINAL: '정품 확인되었습니다.', MODIFIED: 'GeoCode가 감지되었으나 파일이 변형되었습니다.', INVALID: '공식 GeoCode가 없습니다.' }[s] || '오류가 발생했습니다.');
+  const statusIcon = (s: string) => ({ ORIGINAL: '🟢', MODIFIED: '🟡', INVALID: '🔴' }[s] || '⚪');
+
+  const btnBg    = file && !loading ? 'rgba(251,191,36,0.2)'   : 'rgba(167,139,250,0.15)';
+  const btnColor = file && !loading ? '#FBBF24'                : '#A78BFA';
+
+  return (
+    <div style={{ padding: '32px', maxWidth: '720px' }}>
+      <p style={{ color: '#A09EB4', fontSize: '13px', marginBottom: '20px' }}>
+        업로드한 디지털 자산이 공식 원본인지 확인합니다.
+      </p>
+
+      <div
+        onClick={() => fileRef.current?.click()}
+        onDrop={handleDrop}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        style={{
+          border: `2px dashed ${dragging ? '#A78BFA' : '#2A2840'}`,
+          borderRadius: '12px',
+          padding: '40px 32px',
+          textAlign: 'center',
+          cursor: 'pointer',
+          marginBottom: '20px',
+          background: dragging ? 'rgba(167,139,250,0.08)' : '#161526',
+          transition: 'all 0.2s',
+        }}
+      >
+        <input
+          ref={fileRef}
+          type="file"
+          accept=".png,.jpg,.jpeg,.webp,image/*"
+          onChange={handleFile}
+          style={{ display: 'none' }}
+        />
+        {preview ? (
+          <img src={preview} alt="preview" style={{ maxHeight: '200px', borderRadius: '8px' }} />
+        ) : (
+          <>
+            <div style={{ fontSize: '32px', marginBottom: '8px' }}>📁</div>
+            <p style={{ color: '#7B798E', fontSize: '14px' }}>PNG / JPG 파일을 클릭하여 업로드하세요</p>
+            <p style={{ color: '#4A4860', fontSize: '12px', marginTop: '4px' }}>또는 파일을 이 영역으로 드래그하세요</p>
+          </>
+        )}
+        {file && <p style={{ color: '#B8B6CC', fontSize: '12px', marginTop: '8px' }}>{file.name}</p>}
+      </div>
+
+      <div style={{ display: 'flex', gap: '12px', marginBottom: '24px' }}>
+        <button
+          onClick={handleSubmit}
+          disabled={loading}
+          style={{
+            padding: '10px 28px', borderRadius: '8px', border: 'none',
+            fontSize: '15px', fontWeight: 600,
+            cursor: !loading ? 'pointer' : 'not-allowed',
+            background: btnBg, color: btnColor, transition: 'all 0.2s',
+          }}
+        >
+          {loading ? '검증 중...' : '검증 실행'}
+        </button>
+        <button
+          onClick={handleReset}
+          style={{
+            padding: '10px 20px', borderRadius: '8px', border: 'none',
+            fontSize: '15px', fontWeight: 500, cursor: 'pointer',
+            background: 'rgba(74,222,128,0.15)', color: '#4ADE80', transition: 'all 0.2s',
+          }}
+        >
+          초기화
+        </button>
+      </div>
+
+      {error && (
+        <div style={{ padding: '16px', borderRadius: '8px', background: 'rgba(248,113,113,0.15)', color: '#F87171', marginBottom: '16px', fontSize: '14px' }}>
+          {error}
+        </div>
+      )}
+
+      {result && (
+        <div style={{ padding: '24px', borderRadius: '12px', background: statusBg(result.status), border: `1px solid ${statusColor(result.status)}` }}>
+
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '6px' }}>
+            <div style={{ fontSize: '22px', fontWeight: 700, color: statusColor(result.status) }}>
+              {statusIcon(result.status)} {result.status}
+            </div>
+            <button
+              onClick={() => setShowDetail(!showDetail)}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#7B798E', fontSize: '12px', padding: 0 }}
+            >
+              {showDetail ? '▲ 상세보기 닫기' : '▼ 상세보기'}
+            </button>
+          </div>
+
+          <div style={{ color: '#F0EFF4', fontSize: '15px', marginBottom: '20px' }}>{statusMsg(result.status)}</div>
+
+          {/* 자산 정보 — DB 연동 */}
+          {result.status === 'ORIGINAL' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {result.asset ? (
+                <>
+                  {[
+                    { label: '발행사',      value: result.asset.publisher },
+                    { label: '아티스트',    value: result.asset.artist },
+                    { label: '시리즈',      value: result.asset.series },
+                    { label: 'DINA ID',    value: result.asset.dina_id },
+                    { label: 'Edition',    value: result.asset.edition },
+                    { label: '현재 상태',  value: result.asset.status },
+                  ].map(({ label, value }) => (
+                    <div key={label} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 14px', background: 'rgba(0,0,0,0.2)', borderRadius: '8px' }}>
+                      <span style={{ color: '#7B798E', fontSize: '13px' }}>{label}</span>
+                      <span style={{ color: label === 'DINA ID' ? '#A78BFA' : '#F0EFF4', fontSize: '13px', fontWeight: 500 }}>{value}</span>
+                    </div>
+                  ))}
+                </>
+              ) : (
+                <div style={{ padding: '12px 14px', background: 'rgba(0,0,0,0.2)', borderRadius: '8px', color: '#7B798E', fontSize: '13px' }}>
+                  자산 정보를 찾을 수 없습니다. (파일명에 DINA ID가 포함되어 있지 않거나 등록되지 않은 자산입니다.)
+                </div>
+              )}
+            </div>
+          )}
+
+          {showDetail && (
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', marginTop: '16px' }}>
+              {[
+                { label: 'Pearson R', value: result.pearson_r.toFixed(4) },
+                { label: 'Score',     value: result.score.toFixed(4) },
+                { label: 'Dot Score', value: result.dot_score.toFixed(4) },
+              ].map(({ label, value }) => (
+                <div key={label} style={{ background: '#0F0E17', borderRadius: '8px', padding: '12px' }}>
+                  <div style={{ color: '#7B798E', fontSize: '11px', marginBottom: '4px' }}>{label}</div>
+                  <div style={{ color: '#F0EFF4', fontSize: '16px', fontWeight: 600 }}>{value}</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}

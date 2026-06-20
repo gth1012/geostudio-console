@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+﻿import { useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../services/api';
@@ -245,7 +245,7 @@ export default function BatchesPage() {
     setRows(prev => prev.map((row, i) => i === index ? { ...row, supply: value } : row));
   };
 
-  const handleMouseDown = (e: React.MouseEvent) => { const tag = (e.target as HTMLElement).tagName; if (['INPUT','TEXTAREA','SELECT','BUTTON','A'].includes(tag)) return; setIsDragging(true); dragOffset.current = { x: e.clientX - modalPos.x, y: e.clientY - modalPos.y }; };
+  const handleMouseDown = (e: React.MouseEvent) => { const tag = (e.target as HTMLElement).tagName; if (['INPUT','TEXTAREA','SELECT','BUTTON','A'].includes(tag)) return; e.preventDefault(); setIsDragging(true); dragOffset.current = { x: e.clientX - modalPos.x, y: e.clientY - modalPos.y }; };
   const handleMouseMove = (e: React.MouseEvent) => { if (!isDragging) return; setModalPos({ x: e.clientX - dragOffset.current.x, y: e.clientY - dragOffset.current.y }); };
   const handleMouseUp = () => { if (isDragging) setIsDragging(false); };
 
@@ -532,7 +532,7 @@ export default function BatchesPage() {
       {/* 작업 생성 모달 */}
       {showModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-start justify-start p-4" onMouseMove={handleMouseMove} onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp}>
-          <div className="bg-geo-card border border-geo-border rounded-xl w-full max-w-md flex flex-col cursor-move select-none" style={{ maxHeight: '85vh', transform: `translate(${modalPos.x}px, ${modalPos.y}px)` }} onMouseDown={handleMouseDown}>
+          <div className="bg-geo-card border border-geo-border rounded-xl w-full max-w-md flex flex-col cursor-move" style={{ maxHeight: '85vh', transform: `translate(${modalPos.x}px, ${modalPos.y}px)` }} onMouseDown={handleMouseDown}>
             <div className="bg-geo-main px-4 py-3 border-b border-geo-border rounded-t-xl flex-shrink-0 flex justify-between items-center gap-2">
               <div className="w-6" />
               <select
@@ -602,8 +602,8 @@ export default function BatchesPage() {
 
       {/* 이미지 추가 모달 */}
       {showImageModal && (
-        <div className="fixed inset-0 z-[60] flex items-start justify-start pt-4 pl-[464px]" onMouseMove={handleImgMouseMove} onMouseUp={handleImgMouseUp} onMouseLeave={handleImgMouseUp}>
-          <div className="bg-geo-card border border-geo-border rounded-xl w-full max-w-lg cursor-move select-none" style={{ transform: `translate(${imgModalPos.x}px, ${imgModalPos.y}px)` }} onMouseDown={handleImgMouseDown}>
+        <div className="fixed inset-0 z-[60] flex items-start justify-end pt-4 pr-4" onMouseMove={handleImgMouseMove} onMouseUp={handleImgMouseUp} onMouseLeave={handleImgMouseUp}>
+          <div className="bg-geo-card border border-geo-border rounded-xl w-full max-w-lg cursor-move" style={{ transform: `translate(${imgModalPos.x}px, ${imgModalPos.y}px)` }} onMouseDown={handleImgMouseDown}>
             <div className="bg-geo-main px-6 py-3 border-b border-geo-border rounded-t-xl flex items-center justify-between">
               <h2 className="text-base font-semibold text-txt-primary">원본 이미지 추가</h2>
               <button onClick={() => setShowImageModal(false)} className="w-7 h-7 flex items-center justify-center rounded-lg text-txt-muted hover:text-txt-primary hover:bg-geo-card-hover transition-all">
@@ -651,7 +651,7 @@ export default function BatchesPage() {
           onMouseLeave={handleBulkMouseUp}
         >
           <div
-            className="bg-geo-card border border-geo-border rounded-xl w-full max-w-lg flex flex-col cursor-move select-none"
+            className="bg-geo-card border border-geo-border rounded-xl w-full max-w-lg flex flex-col cursor-move"
             style={{ maxHeight: '90vh', transform: `translate(${bulkModalPos.x}px, ${bulkModalPos.y}px)` }}
             onMouseDown={handleBulkMouseDown}
           >
