@@ -356,7 +356,7 @@ export default function BatchesPage() {
   };
 
   const getStatusLabel = (status: string) => {
-    const map: Record<string, string> = { DRAFT: '작업생성됨', IN_PROGRESS: '진행 중', COMPLETED: '완료', PRINTED: '지오코드생성 완료', SHIPPED: '출고완료', FAILED: '실패', LOCKED: '확정', PRINTING: '생성 중', PRINT_FAILED: '생성 실패', PURGED: '출고완료', VOID: '무효' };
+    const map: Record<string, string> = { DRAFT: '작업생성됨', IN_PROGRESS: '진행 중', COMPLETED: '완료', PRINTED: 'DINA 코드 생성 완료', SHIPPED: '출고완료', FAILED: '실패', LOCKED: '확정', PRINTING: '생성 중', PRINT_FAILED: '생성 실패', PURGED: '출고완료', VOID: '무효' };
     return map[status] || status;
   };
 
@@ -457,8 +457,8 @@ export default function BatchesPage() {
 
       {filteredBatches?.length > 0 && filteredBatches.every((b: any) => b.status === 'PRINTED') && (
         <div className="mt-4 px-6 py-5 bg-status-purple-dim border border-status-purple/30 rounded-lg text-center">
-          <p className="text-base font-semibold text-status-green mb-1">지오코드생성 완료!</p>
-          <p className="text-sm text-txt-secondary">다음 단계는{' '}<button onClick={() => window.location.hash = '/exports'} className="text-status-yellow font-semibold hover:underline">[자산 출고]</button>에서 진행하세요.</p>
+          <p className="text-base font-semibold text-status-green mb-1">DINA 코드 생성 완료.</p>
+          <p className="text-sm text-txt-secondary">GeoCode 이미지 삽입은 출고 생성 시 자동 처리됩니다.</p>
         </div>
       )}
       {!filteredBatches?.length && (
