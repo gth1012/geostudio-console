@@ -83,7 +83,7 @@ export default function DigitalPage() {
 
   const statusColor = (s: string) => ({ ORIGINAL: '#4ADE80', MODIFIED: '#FBBF24', INVALID: '#F87171' }[s] || '#7B798E');
   const statusBg   = (s: string) => ({ ORIGINAL: 'rgba(74,222,128,0.15)', MODIFIED: 'rgba(251,191,36,0.15)', INVALID: 'rgba(248,113,113,0.15)' }[s] || 'rgba(123,121,142,0.15)');
-  const statusMsg  = (s: string) => ({ ORIGINAL: '정품 확인되었습니다.', MODIFIED: 'GeoCode가 감지되었으나 파일이 변형되었습니다.', INVALID: '공식 GeoCode가 없습니다.' }[s] || '오류가 발생했습니다.');
+  const statusMsg  = (s: string) => ({ ORIGINAL: '정품 확인되었습니다.', MODIFIED: 'GeoCode가 감지되었으나 파일이 변형되었습니다.', INVALID: '정품이 아닙니다.' }[s] || '오류가 발생했습니다.');
   const statusIcon = (s: string) => ({ ORIGINAL: '🟢', MODIFIED: '🟡', INVALID: '🔴' }[s] || '⚪');
 
   const btnBg    = file && !loading ? 'rgba(251,191,36,0.2)'   : 'rgba(167,139,250,0.15)';
