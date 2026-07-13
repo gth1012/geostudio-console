@@ -85,8 +85,7 @@ export default function ShipmentDetailModal({ shipmentId, onClose }: ShipmentDet
   });
 
   const handleMouseDown = (e: React.MouseEvent) => {
-    const tag = (e.target as HTMLElement).tagName;
-    if (['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON', 'A'].includes(tag)) return;
+    if ((e.target as HTMLElement).closest('button, input, textarea, select, a')) return;
     setIsDragging(true);
     dragOffset.current = { x: e.clientX - modalPos.x, y: e.clientY - modalPos.y };
   };
